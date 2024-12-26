@@ -17,6 +17,14 @@ class MainScene extends Phaser.Scene {
         this.load.image('goblin2', 'assets/goblin/goblin_2.png');
         this.load.image('goblin3', 'assets/goblin/goblin_3.png');
 
+        // Load Goblin run animation
+        this.load.image('goblin_run0', 'assets/goblin/goblin_run0.png');
+        this.load.image('goblin_run1', 'assets/goblin/goblin_run1.png');
+        this.load.image('goblin_run2', 'assets/goblin/goblin_run2.png');
+        this.load.image('goblin_run3', 'assets/goblin/goblin_run3.png');
+        this.load.image('goblin_run4', 'assets/goblin/goblin_run4.png');
+        this.load.image('goblin_run5', 'assets/goblin/goblin_run5.png');
+
 
         // Create a custom cursor texture programmatically
         const cursorGraphics = this.add.graphics();
@@ -67,6 +75,21 @@ class MainScene extends Phaser.Scene {
             ],
             frameRate: 8, // Adjust this value to make animation faster or slower
             repeat: -1 // -1 means loop forever
+        });
+
+        // Create run animation for goblin run
+        this.anims.create({
+            key: 'goblin_run',
+            frames: [
+                { key: 'goblin_run0' },
+                { key: 'goblin_run1' },
+                { key: 'goblin_run2' },
+                { key: 'goblin_run3' },
+                { key: 'goblin_run4' },
+                { key: 'goblin_run5' }
+            ],
+            frameRate: 8,
+            repeat: -1
         });
 
         this.gameOver = false;
@@ -452,6 +475,22 @@ class MainScene extends Phaser.Scene {
 
         // Add update listener for flipping the sprite based on movement direction
         enemy.updateDirection = () => {
+            const isMoving = enemy.body.velocity.length() > 0;
+        
+            // Update animation based on movement
+            if (isMoving) {
+                if (enemy.anims.currentAnim?.key !== 'goblin_run') {
+                    enemy.play('goblin_run');
+                    // enemy.setScale(0.8); // Scale up the enemy
+                }
+            } else {
+                if (enemy.anims.currentAnim?.key !== 'goblin_idle') {
+                    enemy.play('goblin_idle');
+                    // enemy.setScale(0.2);
+                }
+            }
+
+            // Handle sprite flipping based on velocity
             if (enemy.body.velocity.x < 0) {
                 enemy.setFlipX(true);
             } else if (enemy.body.velocity.x > 0) {
