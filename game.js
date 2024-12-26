@@ -1,14 +1,15 @@
 class MainScene extends Phaser.Scene {
     preload() {
-        // Load the sword sprite
+        // Load the assets
         this.load.image('sword', 'assets/sword.png');
+        this.load.audio('hitSound', 'assets/hit.wav');
     }
 
     constructor() {
         super({ key: 'MainScene' });
         this.player = null;
         this.enemies = null;
-        this.cursors = null;
+        this.moveKeys = null;  // Changed from cursors to moveKeys
         this.moveSpeed = 200;
         // Define larger world dimensions
         this.worldWidth = 2400;  // 3x original width
@@ -71,7 +72,13 @@ class MainScene extends Phaser.Scene {
         this.cameras.main.setDeadzone(0, 0);
         this.cameras.main.setBounds(0, 0, this.worldWidth, this.worldHeight);
 
-        this.cursors = this.input.keyboard.createCursorKeys();
+        // Setup WASD keys
+        this.moveKeys = this.input.keyboard.addKeys({
+            up: Phaser.Input.Keyboard.KeyCodes.W,
+            down: Phaser.Input.Keyboard.KeyCodes.S,
+            left: Phaser.Input.Keyboard.KeyCodes.A,
+            right: Phaser.Input.Keyboard.KeyCodes.D
+        });
         
         // Weapon setup
         const weaponGraphics = this.add.graphics();
@@ -123,10 +130,6 @@ class MainScene extends Phaser.Scene {
         const targetX = this.player.x + weaponOffsetX;
         const targetY = this.player.y + weaponOffsetY;
 
-        // Update weapon position relative to player
-        // this.weapon.x = this.player.x + weaponOffsetX;
-        // this.weapon.y = this.player.y + weaponOffsetY;
-
         const lerpFactor = 0.1;
         this.weapon.x = Phaser.Math.Linear(this.weapon.x, targetX, lerpFactor);
         this.weapon.y = Phaser.Math.Linear(this.weapon.y, targetY, lerpFactor);
@@ -155,17 +158,17 @@ class MainScene extends Phaser.Scene {
             }
         });
 
-        // Handle movement
-        if (this.cursors.left.isDown) {
+        // Handle WASD movement
+        if (this.moveKeys.left.isDown) {
             this.player.body.setVelocityX(-this.moveSpeed);
         }
-        if (this.cursors.right.isDown) {
+        if (this.moveKeys.right.isDown) {
             this.player.body.setVelocityX(this.moveSpeed);
         }
-        if (this.cursors.up.isDown) {
+        if (this.moveKeys.up.isDown) {
             this.player.body.setVelocityY(-this.moveSpeed);
         }
-        if (this.cursors.down.isDown) {
+        if (this.moveKeys.down.isDown) {
             this.player.body.setVelocityY(this.moveSpeed);
         }
 
@@ -197,7 +200,7 @@ class MainScene extends Phaser.Scene {
         }
     }
     
-    // The rest of the methods remain the same, but update spawnEnemies to use new world bounds
+    // The rest of the methods remain unchanged
     spawnEnemies() {
         if (this.gameOver) {
             return;
@@ -209,7 +212,6 @@ class MainScene extends Phaser.Scene {
         }
     }
 
-    // Include all other existing methods (createEnemy, doMeleeAttack, hitEnemy, playerHitByEnemy)
     createEnemy(x, y) {
         const enemy = this.physics.add.sprite(x, y, 'enemy');
         enemy.hitPoints = 3;
@@ -245,6 +247,7 @@ class MainScene extends Phaser.Scene {
     hitEnemy(weapon, enemy) {
         if (!enemy.isHit) {
             enemy.isHit = true;
+            this.sound.play('hitSound', { volume: 0.20 });
             enemy.hitPoints--;
             enemy.healthText.setText(enemy.hitPoints.toString());
 
