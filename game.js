@@ -61,6 +61,9 @@ class MainScene extends Phaser.Scene {
 
         // Add blood effects group
         this.bloodEffects = null;
+
+        // Add damage flash overlay property
+        this.damageFlash = null;
     }
 
     create() {
@@ -247,6 +250,13 @@ class MainScene extends Phaser.Scene {
          this.gun.setOrigin(0.3, 0.5);
          // You might need to adjust scale depending on your sprite size
          this.gun.setScale(0.2);
+
+
+        this.damageFlash = this.add.rectangle(0, 0, this.worldWidth * 2, this.worldHeight * 2, 0xff0000);
+        this.damageFlash.setAlpha(0);
+        this.damageFlash.setScrollFactor(0);
+        this.damageFlash.setDepth(999); // Make sure it's above everything except the cursor
+        
     }
 
     update() {
@@ -530,6 +540,39 @@ class MainScene extends Phaser.Scene {
             // Add blood effect at enemy position
             this.createBloodEffect(enemy.x, enemy.y);
 
+            // Check if what weapon hit the enemy
+            if (weapon !== 'projectile') {
+                // Calculate knockback direction from player to enemy
+                const angle = Phaser.Math.Angle.Between(
+                    this.player.x, this.player.y,
+                    enemy.x, enemy.y
+                );
+
+                // Apply knockback force
+                const knockbackForce = 500; // Adjust this value for stronger/weaker knockback
+                enemy.body.setVelocity(
+                    Math.cos(angle) * knockbackForce,
+                    Math.sin(angle) * knockbackForce
+                );
+
+                 // Add screen shake
+                this.cameras.main.shake(100, 0.002);
+
+                // Add jitter effect to the enemy
+                this.tweens.add({
+                    targets: enemy,
+                    x: { from: enemy.x - 2, to: enemy.x + 2 },
+                    y: { from: enemy.y - 2, to: enemy.y + 2 },
+                    duration: 50,
+                    yoyo: true,
+                    repeat: 2,
+                    ease: 'Linear'
+                });
+
+                const currentScale = enemy.scale;
+
+            }
+
             this.tweens.add({
                 targets: enemy,
                 tint: 0xff0000,
@@ -553,6 +596,15 @@ class MainScene extends Phaser.Scene {
             }
             // Add screen shake here
             this.screenShake();
+
+            // Flash the screen red
+            this.damageFlash.setAlpha(0.3); // Show the red overlay
+            this.tweens.add({
+                targets: this.damageFlash,
+                alpha: 0,
+                duration: 100, // Duration of the flash
+                ease: 'Linear'
+            });
 
             // Pick a random damage sound
             const soundKey = Phaser.Math.RND.pick(['damage', 'damage2', 'damage3']);
