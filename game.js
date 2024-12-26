@@ -3,6 +3,28 @@ class MainScene extends Phaser.Scene {
         // Load the assets
         this.load.image('sword', 'assets/sword.png');
         this.load.audio('hitSound', 'assets/hit.wav');
+
+
+        // Create a custom cursor texture programmatically
+        const cursorGraphics = this.add.graphics();
+        
+        // Draw outer circle
+        cursorGraphics.lineStyle(2, 0xFFFFFF); // White color, 2px thickness
+        cursorGraphics.strokeCircle(16, 16, 12); // Center at 16,16, radius 12
+        
+        // Draw inner circle
+        cursorGraphics.lineStyle(2, 0xFFFFFF);
+        cursorGraphics.strokeCircle(16, 16, 4);
+        
+        // Draw crosshair lines
+        cursorGraphics.lineStyle(2, 0xFFFFFF);
+        // Horizontal line
+        cursorGraphics.lineBetween(0, 16, 32, 16);
+        // Vertical line
+        cursorGraphics.lineBetween(16, 0, 16, 32);
+        
+        cursorGraphics.generateTexture('cursor', 32, 32);
+        cursorGraphics.destroy();
     }
 
     constructor() {
@@ -14,10 +36,24 @@ class MainScene extends Phaser.Scene {
         // Define larger world dimensions
         this.worldWidth = 2400;  // 3x original width
         this.worldHeight = 1800; // 3x original height
+        this.shootCooldown = 500;
     }
 
     create() {
         this.gameOver = false;
+
+        // Hide the default cursor
+        this.input.setDefaultCursor('none');
+        
+        // Create the cursor sprite and make it follow the pointer
+        this.cursor = this.add.sprite(0, 0, 'cursor');
+        this.cursor.setDepth(999); // Make sure it's always on top
+        
+        // Update cursor position in the game loop
+        this.input.on('pointermove', (pointer) => {
+            this.cursor.x = pointer.x + this.cameras.main.scrollX;
+            this.cursor.y = pointer.y + this.cameras.main.scrollY;
+        });
         
         // Set the physics world bounds to match our larger world
         this.physics.world.setBounds(0, 0, this.worldWidth, this.worldHeight);
@@ -31,6 +67,23 @@ class MainScene extends Phaser.Scene {
         this.terrain.add(this.add.rectangle(2000, 400, 40, 400, 0xFFFF00));
         this.terrain.add(this.add.rectangle(400, 1200, 40, 400, 0xFFFF00));
         this.terrain.add(this.add.rectangle(1200, 1500, 40, 400, 0xFFFF00));
+
+        // Create projectile texture
+        const projectileGraphics = this.add.graphics();
+        projectileGraphics.fillStyle(0x00FF00); // Green color
+        projectileGraphics.fillCircle(0, 0, 8); // 8px radius circle
+        projectileGraphics.generateTexture('projectile', 16, 16);
+        projectileGraphics.destroy();
+
+        // Create projectiles group
+        this.projectiles = this.physics.add.group();
+
+        // Add mouse input
+        this.input.on('pointerdown', (pointer) => {
+            if (pointer.leftButtonDown()) {
+                this.shootProjectile(pointer);
+            }
+        });
 
         // Create player graphics and texture (same as before)
         const graphics = this.add.graphics();
@@ -115,6 +168,14 @@ class MainScene extends Phaser.Scene {
             callbackScope: this,
             loop: true
         });
+
+        // Add collision between projectiles and enemies
+        this.physics.add.overlap(this.projectiles, this.enemies, this.projectileHitEnemy, null, this);
+
+        // Add collision between projectiles and terrain
+        this.physics.add.collider(this.projectiles, this.terrain, (projectile) => {
+            projectile.destroy();
+        });
     }
 
     update() {
@@ -198,6 +259,49 @@ class MainScene extends Phaser.Scene {
         if (Phaser.Input.Keyboard.JustDown(this.spaceBar)) {
             this.doMeleeAttack();
         }
+
+        // Update cursor position relative to camera
+        this.cursor.x = this.input.activePointer.x + this.cameras.main.scrollX;
+        this.cursor.y = this.input.activePointer.y + this.cameras.main.scrollY;
+    }
+
+
+    shootProjectile(pointer) {
+        if (this.gameOver) return;
+    
+        // Get world position of pointer
+        const worldPoint = pointer.position;
+        const angle = Phaser.Math.Angle.Between(
+            this.player.x, this.player.y,
+            worldPoint.x + this.cameras.main.scrollX,
+            worldPoint.y + this.cameras.main.scrollY
+        );
+    
+        // Create projectile at player's position
+        const projectile = this.projectiles.create(this.player.x, this.player.y, 'projectile');
+        
+        // Set projectile properties
+        const speed = 300;
+        projectile.setVelocity(
+            Math.cos(angle) * speed,
+            Math.sin(angle) * speed
+        );
+    
+        // Optional: Add rotation to the projectile
+        projectile.setRotation(angle);
+    
+        // Destroy projectile after 2 seconds
+        this.time.delayedCall(500, () => {
+            projectile.destroy();
+        });
+    }
+
+    projectileHitEnemy(projectile, enemy) {
+        // Destroy the projectile
+        projectile.destroy();
+    
+        // Reuse existing hitEnemy logic but pass null as weapon
+        this.hitEnemy(null, enemy);
     }
     
     // The rest of the methods remain unchanged
@@ -205,7 +309,7 @@ class MainScene extends Phaser.Scene {
         if (this.gameOver) {
             return;
         }
-        for (let i = 0; i < 2; i++) {
+        for (let i = 0; i < 5; i++) {
             const x = Phaser.Math.Between(50, this.worldWidth - 50);
             const y = Phaser.Math.Between(50, this.worldHeight - 50);
             this.createEnemy(x, y);
