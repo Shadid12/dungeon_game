@@ -4,6 +4,10 @@ class MainScene extends Phaser.Scene {
         this.load.image('sword', 'assets/sword.png');
         this.load.audio('hitSound', 'assets/hit.wav');
         this.load.image('gun', 'assets/gun.png');
+        this.load.audio('damage', 'assets/damage.wav');
+        this.load.audio('damage2', 'assets/damage2.wav');
+        this.load.audio('damage3', 'assets/damage3.wav');
+        this.load.audio('retro_metal', 'assets/retro_metal.ogg');
 
 
         // Create a custom cursor texture programmatically
@@ -42,6 +46,14 @@ class MainScene extends Phaser.Scene {
 
     create() {
         this.gameOver = false;
+
+        this.backgroundMusic = this.sound.add('retro_metal', {
+            volume: 0.3,        // 30% volume
+            loop: true,         // Music will loop
+            delay: 0            // Start immediately
+        });
+
+        this.backgroundMusic.play();
 
         // Hide the default cursor
         this.input.setDefaultCursor('none');
@@ -343,12 +355,16 @@ class MainScene extends Phaser.Scene {
         });
     }
 
+    screenShake() {
+        this.cameras.main.shake(200, 0.005);  // Duration: 200ms, Intensity: 0.005
+    }
+
     projectileHitEnemy(projectile, enemy) {
         // Destroy the projectile
         projectile.destroy();
     
         // Reuse existing hitEnemy logic but pass null as weapon
-        this.hitEnemy(null, enemy);
+        this.hitEnemy('projectile', enemy);
     }
     
     // The rest of the methods remain unchanged
@@ -398,7 +414,11 @@ class MainScene extends Phaser.Scene {
     hitEnemy(weapon, enemy) {
         if (!enemy.isHit) {
             enemy.isHit = true;
-            this.sound.play('hitSound', { volume: 0.20 });
+            if (weapon === 'projectile') {
+                this.sound.play('hitSound', { volume: 0.20 });
+            } else {
+                this.sound.play('hitSound', { volume: 0.20 });
+            }
             enemy.hitPoints--;
             enemy.healthText.setText(enemy.hitPoints.toString());
 
@@ -423,6 +443,13 @@ class MainScene extends Phaser.Scene {
             if (this.gameOver) {
                 return
             }
+            // Add screen shake here
+            this.screenShake();
+
+            // Pick a random damage sound
+            const soundKey = Phaser.Math.RND.pick(['damage', 'damage2', 'damage3']);
+            this.sound.play(soundKey, { volume: 0.20 });
+
             player.health--;
             this.healthText.setText('Health: ' + player.health);
 
@@ -443,6 +470,7 @@ class MainScene extends Phaser.Scene {
 
             if (player.health <= 0) {
                 this.gameOver = true;
+                this.backgroundMusic.stop();
                 
                 const gameOverText = this.add.text(
                     this.cameras.main.centerX,
