@@ -7,9 +7,15 @@ class MainScene extends Phaser.Scene {
         this.load.audio('damage', 'assets/damage.wav');
         this.load.audio('damage2', 'assets/damage2.wav');
         this.load.audio('damage3', 'assets/damage3.wav');
-        this.load.audio('retro_metal', 'assets/retro_metal.ogg');
+        // this.load.audio('retro_metal', 'assets/retro_metal.ogg');
+        this.load.audio('goblin_theme', 'assets/goblin_theme.wav');
 
         this.load.image('blood', 'assets/blood_1.png');
+
+        // Load goblin sprite frames
+        this.load.image('goblin1', 'assets/goblin/goblin_1.png');
+        this.load.image('goblin2', 'assets/goblin/goblin_2.png');
+        this.load.image('goblin3', 'assets/goblin/goblin_3.png');
 
 
         // Create a custom cursor texture programmatically
@@ -50,15 +56,29 @@ class MainScene extends Phaser.Scene {
     }
 
     create() {
+
+        // Create animation for goblins
+        this.anims.create({
+            key: 'goblin_idle',
+            frames: [
+                { key: 'goblin1' },
+                { key: 'goblin2' },
+                { key: 'goblin3' }
+            ],
+            frameRate: 8, // Adjust this value to make animation faster or slower
+            repeat: -1 // -1 means loop forever
+        });
+
         this.gameOver = false;
 
         // Add this after other group creations
         this.bloodEffects = this.add.group();
 
-        this.backgroundMusic = this.sound.add('retro_metal', {
+        // Pick a random background music
+        this.backgroundMusic = this.sound.add('goblin_theme', {
             volume: 0.3,        // 30% volume
             loop: true,         // Music will loop
-            delay: 0            // Start immediately
+            delay: 2           // Start immediately
         });
 
         this.backgroundMusic.play();
@@ -255,9 +275,11 @@ class MainScene extends Phaser.Scene {
         }
 
         
+        // Update enemy directions based on movement
         this.enemies.getChildren().forEach(enemy => {
+            enemy.updateDirection();
             enemy.healthText.x = enemy.x;
-            enemy.healthText.y = enemy.y - 20;
+            enemy.healthText.y = enemy.y - 40; // Adjusted y offset for the sprite
             
             const distance = Phaser.Math.Distance.Between(
                 enemy.x, enemy.y,
@@ -330,7 +352,7 @@ class MainScene extends Phaser.Scene {
     createBloodEffect(x, y) {
         const blood = this.bloodEffects.create(x, y, 'blood');
         blood.setAlpha(0.5);
-        blood.setScale(0.8); // Adjust scale as needed
+        blood.setScale(1.5); // Adjust scale as needed
         
         // Random rotation for variety
         blood.setRotation(Phaser.Math.FloatBetween(0, Math.PI * 2));
@@ -409,18 +431,33 @@ class MainScene extends Phaser.Scene {
     }
 
     createEnemy(x, y) {
-        const enemy = this.physics.add.sprite(x, y, 'enemy');
+        const enemy = this.physics.add.sprite(x, y, 'goblin1');
+        // Start the idle animation
+        enemy.play('goblin_idle');
+
+        enemy.setScale(0.2); // Scale down the enemy
+
         enemy.hitPoints = 3;
         enemy.detectionRadius = 200;
         enemy.moveSpeed = 100;
         
-        enemy.healthText = this.add.text(x, y - 20, '3', {
+        // Add health text above the goblin
+        enemy.healthText = this.add.text(x, y - 40, '3', { // Adjusted y offset for the sprite
             fontSize: '16px',
             fill: '#fff',
             backgroundColor: '#000',
             padding: { x: 2, y: 2 }
         });
         enemy.healthText.setOrigin(0.5);
+
+        // Add update listener for flipping the sprite based on movement direction
+        enemy.updateDirection = () => {
+            if (enemy.body.velocity.x < 0) {
+                enemy.setFlipX(true);
+            } else if (enemy.body.velocity.x > 0) {
+                enemy.setFlipX(false);
+            }
+        };
         
         this.enemies.add(enemy);
         return enemy;
