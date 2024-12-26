@@ -3,6 +3,7 @@ class MainScene extends Phaser.Scene {
         // Load the assets
         this.load.image('sword', 'assets/sword.png');
         this.load.audio('hitSound', 'assets/hit.wav');
+        this.load.image('gun', 'assets/gun.png');
 
 
         // Create a custom cursor texture programmatically
@@ -176,6 +177,13 @@ class MainScene extends Phaser.Scene {
         this.physics.add.collider(this.projectiles, this.terrain, (projectile) => {
             projectile.destroy();
         });
+
+         // Create the gun
+         this.gun = this.add.sprite(this.player.x, this.player.y, 'gun');
+         // Set the origin to the gun's grip/rotation point (adjust these values based on your gun sprite)
+         this.gun.setOrigin(0.3, 0.5);
+         // You might need to adjust scale depending on your sprite size
+         this.gun.setScale(0.2);
     }
 
     update() {
@@ -194,6 +202,38 @@ class MainScene extends Phaser.Scene {
         const lerpFactor = 0.1;
         this.weapon.x = Phaser.Math.Linear(this.weapon.x, targetX, lerpFactor);
         this.weapon.y = Phaser.Math.Linear(this.weapon.y, targetY, lerpFactor);
+
+        const gunOffsetX = 20;  // Horizontal distance from player
+        const gunOffsetY = -10;   // Vertical distance from player
+
+        const targetXGun = this.player.x + gunOffsetX;
+        const targetYGun = this.player.y + gunOffsetY;
+
+        this.gun.x = Phaser.Math.Linear(this.gun.x, targetXGun, lerpFactor);
+        this.gun.y = Phaser.Math.Linear(this.gun.y, targetYGun, lerpFactor);
+
+        // Calculate angle between gun and cursor for gun rotation
+        const angle = Phaser.Math.Angle.Between(
+            this.gun.x,
+            this.gun.y,
+            this.input.activePointer.x + this.cameras.main.scrollX,
+            this.input.activePointer.y + this.cameras.main.scrollY
+        );
+
+        // Convert angle to degrees
+        const angleDeg = Phaser.Math.RadToDeg(angle);
+
+        // Flip the gun sprite instead of doing full rotation
+        if (angleDeg > 90 || angleDeg < -90) {
+            // Pointing left
+            this.gun.setFlipX(true);
+            this.gun.setRotation(angle + Math.PI);
+        } else {
+            // Pointing right
+            this.gun.setFlipX(false);
+            this.gun.setRotation(angle);
+        }
+
         
         this.enemies.getChildren().forEach(enemy => {
             enemy.healthText.x = enemy.x;
@@ -263,6 +303,8 @@ class MainScene extends Phaser.Scene {
         // Update cursor position relative to camera
         this.cursor.x = this.input.activePointer.x + this.cameras.main.scrollX;
         this.cursor.y = this.input.activePointer.y + this.cameras.main.scrollY;
+
+        
     }
 
 
@@ -277,8 +319,13 @@ class MainScene extends Phaser.Scene {
             worldPoint.y + this.cameras.main.scrollY
         );
     
-        // Create projectile at player's position
-        const projectile = this.projectiles.create(this.player.x, this.player.y, 'projectile');
+        // Calculate the position at the end of the gun barrel
+        const offsetDistance = 40; // Adjust based on your gun sprite
+        const projectileX = this.gun.x + Math.cos(angle) * offsetDistance;
+        const projectileY = this.gun.y + Math.sin(angle) * offsetDistance;
+
+        // Create projectile at gun's position
+        const projectile = this.projectiles.create(projectileX, projectileY, 'projectile');
         
         // Set projectile properties
         const speed = 300;
