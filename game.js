@@ -9,6 +9,8 @@ class MainScene extends Phaser.Scene {
         this.load.audio('damage3', 'assets/damage3.wav');
         this.load.audio('retro_metal', 'assets/retro_metal.ogg');
 
+        this.load.image('blood', 'assets/blood_1.png');
+
 
         // Create a custom cursor texture programmatically
         const cursorGraphics = this.add.graphics();
@@ -42,10 +44,16 @@ class MainScene extends Phaser.Scene {
         this.worldWidth = 2400;  // 3x original width
         this.worldHeight = 1800; // 3x original height
         this.shootCooldown = 500;
+
+        // Add blood effects group
+        this.bloodEffects = null;
     }
 
     create() {
         this.gameOver = false;
+
+        // Add this after other group creations
+        this.bloodEffects = this.add.group();
 
         this.backgroundMusic = this.sound.add('retro_metal', {
             volume: 0.3,        // 30% volume
@@ -319,6 +327,27 @@ class MainScene extends Phaser.Scene {
         
     }
 
+    createBloodEffect(x, y) {
+        const blood = this.bloodEffects.create(x, y, 'blood');
+        blood.setAlpha(0.5);
+        blood.setScale(0.8); // Adjust scale as needed
+        
+        // Random rotation for variety
+        blood.setRotation(Phaser.Math.FloatBetween(0, Math.PI * 2));
+        
+        // Fade out and destroy effect
+        this.tweens.add({
+            targets: blood,
+            alpha: 0,
+            scale: 0.8,
+            duration: 1000,
+            ease: 'Power2',
+            onComplete: () => {
+                blood.destroy();
+            }
+        });
+    }
+
 
     shootProjectile(pointer) {
         if (this.gameOver) return;
@@ -421,6 +450,9 @@ class MainScene extends Phaser.Scene {
             }
             enemy.hitPoints--;
             enemy.healthText.setText(enemy.hitPoints.toString());
+
+            // Add blood effect at enemy position
+            this.createBloodEffect(enemy.x, enemy.y);
 
             this.tweens.add({
                 targets: enemy,
