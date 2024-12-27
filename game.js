@@ -86,6 +86,7 @@ class MainScene extends Phaser.Scene {
 
         this.slashCooldown = false;
         this.slashDamage = 3;
+        this.healthDrops = null;
     }
 
     create() {
@@ -359,6 +360,12 @@ class MainScene extends Phaser.Scene {
 
         // Add Q key for slash attack
         this.qKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.Q);
+
+        // Create health drops group
+        this.healthDrops = this.physics.add.group();
+    
+        // Add collision for health pickup
+        this.physics.add.overlap(this.player, this.healthDrops, this.collectHealth, null, this);
         
     }
 
@@ -515,6 +522,31 @@ class MainScene extends Phaser.Scene {
         this.bulletCount += 20;
         this.bulletText.setText(`Bullets: ${this.bulletCount}`);
         this.sound.play('reload', { volume: 0.20 });
+    }
+
+    // Add health collection method
+    collectHealth(player, health) {
+        health.destroy();
+        
+        // Get current health from the display
+        let currentHealth = parseInt(this.healthNumber.text);
+        
+        // Only heal if not at max health (10)
+        if (currentHealth < 10) {
+            currentHealth += 1;
+            this.healthNumber.setText(currentHealth.toString());
+            
+            // Add healing effect
+            this.tweens.add({
+                targets: this.heartSprite,
+                scale: { from: 2.5, to: 2 },
+                duration: 200,
+                ease: 'Bounce.Out'
+            });
+            
+            // Optional: Add a healing sound here if you have one
+            // this.sound.play('heal', { volume: 0.2 });
+        }
     }
 
 
@@ -832,11 +864,26 @@ class MainScene extends Phaser.Scene {
                 onComplete: () => {
                     enemy.isHit = false;
                     if (enemy.hitPoints <= 0) {
-                        // Add chance to drop ammo (30% chance)
-                        if (Phaser.Math.Between(1, 100) <= 30) {
+                        // Check for drops
+                        const roll = Phaser.Math.Between(1, 100);
+                        if (roll <= 20) { // 5% chance for health
+                            const health = this.healthDrops.create(enemy.x, enemy.y, 'heart1');
+                            health.setScale(1);
+                            
+                            // Add a floating animation to make it more visible
+                            this.tweens.add({
+                                targets: health,
+                                y: health.y - 10,
+                                duration: 1000,
+                                yoyo: true,
+                                repeat: -1,
+                                ease: 'Sine.easeInOut'
+                            });
+                        } else if (roll <= 35) { // 30% chance for ammo (as before)
                             const ammo = this.ammoDrops.create(enemy.x, enemy.y, 'ammo');
                             ammo.setScale(0.8);
                         }
+                        
                         enemy.healthText.destroy();
                         enemy.destroy();
                     }
