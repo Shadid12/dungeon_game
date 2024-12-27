@@ -1,3 +1,5 @@
+import Player from './player.js';
+
 class MainScene extends Phaser.Scene {
     preload() {
         // Load the assets
@@ -168,10 +170,18 @@ class MainScene extends Phaser.Scene {
         graphics.destroy();
 
         // Create player in the center of the larger world
-        this.player = this.add.sprite(
-            this.worldWidth / 2,
-            this.worldHeight / 2,
-            'player'
+        // this.player = this.add.sprite(
+        //     this.worldWidth / 2,
+        //     this.worldHeight / 2,
+        //     'player'
+        // );
+
+        // Create a Player instance
+        this.player = new Player(
+            this,                         // Reference to the scene
+            this.worldWidth / 2,         // X position
+            this.worldHeight / 2,        // Y position
+            'player'                     // Texture key
         );
         
         this.player.health = 10;
@@ -390,17 +400,7 @@ class MainScene extends Phaser.Scene {
             bottom: camera.scrollY + camera.height
         };
       
-        // Clamp player position to stay within camera bounds
-        this.player.x = Phaser.Math.Clamp(
-            this.player.x,
-            cameraBounds.left + this.player.width/2,
-            cameraBounds.right - this.player.width/2
-        );
-        this.player.y = Phaser.Math.Clamp(
-            this.player.y,
-            cameraBounds.top + this.player.height/2,
-            cameraBounds.bottom - this.player.height/2
-        );
+        this.player.update(cameraBounds);
         
         if (Phaser.Input.Keyboard.JustDown(this.spaceBar)) {
             this.doMeleeAttack();
@@ -502,10 +502,10 @@ class MainScene extends Phaser.Scene {
         enemy.setScale(0.2); // Scale down the enemy
 
         enemy.hitPoints = 3;
-        enemy.detectionRadius = 400;
+        enemy.detectionRadius = 200;
         enemy.moveSpeed = 100;
 
-        enemy.maxSpeed = 200;
+        enemy.maxSpeed = 140;
         
         // Add health text above the goblin
         enemy.healthText = this.add.text(x, y - 40, '3', { // Adjusted y offset for the sprite
@@ -601,8 +601,6 @@ class MainScene extends Phaser.Scene {
                     repeat: 2,
                     ease: 'Linear'
                 });
-
-                const currentScale = enemy.scale;
 
             }
 
