@@ -177,8 +177,6 @@ class MainScene extends Phaser.Scene {
             'player'                     // Texture key
         );
         
-        this.player.health = 10;
-        
         this.healthText = this.add.text(16, 16, 'Health: 10', {
             fontSize: '32px',
             fill: '#fff',
