@@ -33,6 +33,7 @@ class MainScene extends Phaser.Scene {
         this.load.image('ammo', 'assets/ammo.png');
         // reload sound
         this.load.audio('reload', 'assets/reload.mp3');
+        this.load.audio('bullet_hit', 'assets/bullet_hit.mp3');
 
 
         // Create a custom cursor texture programmatically
@@ -628,7 +629,7 @@ class MainScene extends Phaser.Scene {
         if (!enemy.isHit) {
             enemy.isHit = true;
             if (weapon === 'projectile') {
-                this.sound.play('hitSound', { volume: 0.20 });
+                this.sound.play('bullet_hit', { volume: 0.20 });
             } else {
                 this.sound.play('hitSound', { volume: 0.20 });
             }
