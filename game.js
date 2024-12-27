@@ -312,25 +312,56 @@ class MainScene extends Phaser.Scene {
         this.enemies.getChildren().forEach(enemy => {
             enemy.updateDirection();
             enemy.healthText.x = enemy.x;
-            enemy.healthText.y = enemy.y - 40; // Adjusted y offset for the sprite
+            enemy.healthText.y = enemy.y - 40;
             
             const distance = Phaser.Math.Distance.Between(
                 enemy.x, enemy.y,
                 this.player.x, this.player.y
             );
             
+            // Enhanced chase behavior
             if (distance <= enemy.detectionRadius) {
                 const angle = Phaser.Math.Angle.Between(
                     enemy.x, enemy.y,
                     this.player.x, this.player.y
                 );
                 
+                // Calculate speed based on distance
+                let chaseSpeed = enemy.moveSpeed;
+                
+                // Speed up when closer to player
+                if (distance < enemy.detectionRadius * 0.5) {
+                    // Gradually increase speed as they get closer
+                    chaseSpeed = Phaser.Math.Linear(
+                        enemy.moveSpeed,
+                        enemy.maxSpeed,
+                        1 - (distance / (enemy.detectionRadius * 0.5))
+                    );
+                }
+                
+                // Add slight randomness to movement for more organic behavior
+                const randomAngle = angle + Phaser.Math.FloatBetween(-0.2, 0.2);
+                
                 enemy.body.setVelocity(
-                    Math.cos(angle) * enemy.moveSpeed,
-                    Math.sin(angle) * enemy.moveSpeed
+                    Math.cos(randomAngle) * chaseSpeed,
+                    Math.sin(randomAngle) * chaseSpeed
                 );
+                
+                // Optional: Add "burst" movement occasionally
+                if (Phaser.Math.Between(1, 100) <= 2) { // 2% chance per update
+                    enemy.body.velocity.scale(1.5); // Brief speed boost
+                }
             } else {
-                enemy.body.setVelocity(0, 0);
+                // When not chasing, wander randomly
+                if (!enemy.wanderTimer || enemy.wanderTimer <= 0) {
+                    const randomAngle = Phaser.Math.FloatBetween(0, Math.PI * 2);
+                    enemy.body.setVelocity(
+                        Math.cos(randomAngle) * (enemy.moveSpeed * 0.5),
+                        Math.sin(randomAngle) * (enemy.moveSpeed * 0.5)
+                    );
+                    enemy.wanderTimer = Phaser.Math.Between(60, 120); // Change direction every 1-2 seconds
+                }
+                enemy.wanderTimer--;
             }
         });
 
@@ -471,8 +502,10 @@ class MainScene extends Phaser.Scene {
         enemy.setScale(0.2); // Scale down the enemy
 
         enemy.hitPoints = 3;
-        enemy.detectionRadius = 200;
+        enemy.detectionRadius = 400;
         enemy.moveSpeed = 100;
+
+        enemy.maxSpeed = 200;
         
         // Add health text above the goblin
         enemy.healthText = this.add.text(x, y - 40, '3', { // Adjusted y offset for the sprite
