@@ -169,13 +169,6 @@ class MainScene extends Phaser.Scene {
         graphics.generateTexture('player', 32, 32);
         graphics.destroy();
 
-        // Create player in the center of the larger world
-        // this.player = this.add.sprite(
-        //     this.worldWidth / 2,
-        //     this.worldHeight / 2,
-        //     'player'
-        // );
-
         // Create a Player instance
         this.player = new Player(
             this,                         // Reference to the scene
@@ -236,7 +229,16 @@ class MainScene extends Phaser.Scene {
         this.createEnemy(1800, 400);
 
         this.physics.add.overlap(this.weapon, this.enemies, this.hitEnemy, null, this);
-        this.physics.add.overlap(this.player, this.enemies, this.playerHitByEnemy, null, this);
+        this.physics.add.overlap(
+            this.player,
+            this.enemies,
+            // Instead of this.playerHitByEnemy, call the method on the Player instance:
+            (player, enemy) => {
+                player.playerHitByEnemy(enemy);
+            },
+            null,
+            this
+        );
         
         // Adjust spawn timer for larger map (more frequent spawns)
         this.time.addEvent({
@@ -475,9 +477,7 @@ class MainScene extends Phaser.Scene {
     }
 
     projectileHitEnemy(projectile, enemy) {
-        // Destroy the projectile
         projectile.destroy();
-    
         // Reuse existing hitEnemy logic but pass null as weapon
         this.hitEnemy('projectile', enemy);
     }
@@ -617,96 +617,6 @@ class MainScene extends Phaser.Scene {
                     }
                 }
             });
-        }
-    }
-  
-    playerHitByEnemy(player, enemy) {
-        if (!player.isInvulnerable) {
-            if (this.gameOver) {
-                return
-            }
-            // Add screen shake here
-            this.screenShake();
-
-            // Flash the screen red
-            this.damageFlash.setAlpha(0.3); // Show the red overlay
-            this.tweens.add({
-                targets: this.damageFlash,
-                alpha: 0,
-                duration: 100, // Duration of the flash
-                ease: 'Linear'
-            });
-
-            // Pick a random damage sound
-            const soundKey = Phaser.Math.RND.pick(['damage', 'damage2', 'damage3']);
-            this.sound.play(soundKey, { volume: 0.20 });
-
-            player.health--;
-            this.healthText.setText('Health: ' + player.health);
-
-            player.isInvulnerable = true;
-            player.alpha = 0.5;
-
-            this.tweens.add({
-                targets: player,
-                alpha: { from: 0.5, to: 1 },
-                duration: 100,
-                repeat: 5,
-                yoyo: true,
-                onComplete: () => {
-                    player.isInvulnerable = false;
-                    player.alpha = 1;
-                }
-            });
-
-            if (player.health <= 0) {
-                this.gameOver = true;
-                this.backgroundMusic.stop();
-                
-                const gameOverText = this.add.text(
-                    this.cameras.main.centerX,
-                    this.cameras.main.centerY,
-                    'GAME OVER',
-                    {
-                        fontSize: '64px',
-                        fill: '#ff0000',
-                        backgroundColor: '#000',
-                        padding: { x: 20, y: 10 }
-                    }
-                );
-                gameOverText.setOrigin(0.5);
-                gameOverText.setScrollFactor(0);
-              
-                const restartButton = this.add.text(
-                    this.cameras.main.centerX,
-                    this.cameras.main.centerY + 50,
-                    'Click to Restart',
-                    {
-                        fontSize: '32px',
-                        fill: '#fff',
-                        backgroundColor: '#00aa00',
-                        padding: { x: 20, y: 10 }
-                    }
-                );
-                restartButton.setOrigin(0.5);
-                restartButton.setScrollFactor(0);
-                restartButton.setInteractive({ useHandCursor: true });
-              
-                restartButton.on('pointerover', () => {
-                    restartButton.setStyle({ fill: '#ff0' });
-                });
-                restartButton.on('pointerout', () => {
-                    restartButton.setStyle({ fill: '#fff' });
-                });
-
-                restartButton.on('pointerdown', () => {
-                    this.scene.restart();
-                });
-                
-                this.enemies.getChildren().forEach(enemy => {
-                    enemy.body.setVelocity(0, 0);
-                });
-            }
         }
     }
 }
