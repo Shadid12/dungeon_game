@@ -221,8 +221,8 @@ class MainScene extends Phaser.Scene {
         this.enemies = this.physics.add.group();
         
         // Create initial enemies spread across the map
-        this.createEnemy(200, 200);
-        this.createEnemy(1200, 800);
+        this.createEnemy(400, 400);
+        this.createEnemy(400, 800);
         this.createEnemy(2000, 1000);
         this.createEnemy(600, 1500);
         this.createEnemy(1800, 400);
@@ -486,10 +486,39 @@ class MainScene extends Phaser.Scene {
         if (this.gameOver) {
             return;
         }
+    
+        const MIN_SPAWN_DISTANCE = 400; // Minimum distance from player (in pixels)
+        const MAX_ATTEMPTS = 10; // Maximum attempts to find a valid spawn position
+    
         for (let i = 0; i < 5; i++) {
-            const x = Phaser.Math.Between(50, this.worldWidth - 50);
-            const y = Phaser.Math.Between(50, this.worldHeight - 50);
-            this.createEnemy(x, y);
+            let validPosition = false;
+            let attempts = 0;
+            let x, y;
+    
+            // Keep trying until we find a valid position or run out of attempts
+            while (!validPosition && attempts < MAX_ATTEMPTS) {
+                // Generate random position
+                x = Phaser.Math.Between(50, this.worldWidth - 50);
+                y = Phaser.Math.Between(50, this.worldHeight - 50);
+    
+                // Calculate distance from player
+                const distance = Phaser.Math.Distance.Between(
+                    x, y,
+                    this.player.x, this.player.y
+                );
+    
+                // Check if position is far enough from player
+                if (distance >= MIN_SPAWN_DISTANCE) {
+                    validPosition = true;
+                }
+    
+                attempts++;
+            }
+    
+            // Only create enemy if we found a valid position
+            if (validPosition) {
+                this.createEnemy(x, y);
+            }
         }
     }
 
