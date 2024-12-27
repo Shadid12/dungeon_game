@@ -1,4 +1,5 @@
 import Player from './player.js';
+import MenuScene from './menu.js';
 
 class MainScene extends Phaser.Scene {
     preload() {
@@ -630,7 +631,17 @@ const config = {
             debug: false
         }
     },
-    scene: MainScene
+    scene: [MenuScene, MainScene] // Add MenuScene as the first scene
 };
 
 const game = new Phaser.Game(config);
+
+
+const originalMainSceneCreate = MainScene.prototype.create;
+MainScene.prototype.create = function() {
+    // Add fade-in effect
+    this.cameras.main.fadeIn(500);
+    
+    // Call the original create method
+    originalMainSceneCreate.call(this);
+};
