@@ -1,5 +1,6 @@
 import Player from './player.js';
 import MenuScene from './menu.js';
+import { createBloodEffect } from './utils.js';
 
 class MainScene extends Phaser.Scene {
     preload() {
@@ -444,27 +445,6 @@ class MainScene extends Phaser.Scene {
         this.sound.play('reload', { volume: 0.20 });
     }
 
-    createBloodEffect(x, y) {
-        const blood = this.bloodEffects.create(x, y, 'blood');
-        blood.setAlpha(0.5);
-        blood.setScale(1.5); // Adjust scale as needed
-        
-        // Random rotation for variety
-        blood.setRotation(Phaser.Math.FloatBetween(0, Math.PI * 2));
-        
-        // Fade out and destroy effect
-        this.tweens.add({
-            targets: blood,
-            alpha: 0,
-            scale: 0.8,
-            duration: 1000,
-            ease: 'Power2',
-            onComplete: () => {
-                blood.destroy();
-            }
-        });
-    }
-
 
     shootProjectile(pointer) {
         if (this.gameOver) return;
@@ -637,7 +617,7 @@ class MainScene extends Phaser.Scene {
             enemy.healthText.setText(enemy.hitPoints.toString());
 
             // Add blood effect at enemy position
-            this.createBloodEffect(enemy.x, enemy.y);
+            createBloodEffect(enemy.x, enemy.y, this.bloodEffects, this.tweens);
 
             // Check if what weapon hit the enemy
             if (weapon !== 'projectile') {
