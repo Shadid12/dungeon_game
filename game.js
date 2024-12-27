@@ -83,6 +83,9 @@ class MainScene extends Phaser.Scene {
 
         this.bulletCount = 100;
         this.ammo = null;
+
+        this.slashCooldown = false;
+        this.slashDamage = 3;
     }
 
     create() {
@@ -353,6 +356,9 @@ class MainScene extends Phaser.Scene {
     
         // Add collision detection for ammo pickup
         this.physics.add.overlap(this.player, this.ammoDrops, this.collectAmmo, null, this);
+
+        // Add Q key for slash attack
+        this.qKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.Q);
         
     }
 
@@ -493,6 +499,10 @@ class MainScene extends Phaser.Scene {
             this.doMeleeAttack();
         }
 
+        if (Phaser.Input.Keyboard.JustDown(this.qKey) && !this.slashCooldown) {
+            this.doSlashAttack();
+        }
+
         // Update cursor position relative to camera
         this.cursor.x = this.input.activePointer.x + this.cameras.main.scrollX;
         this.cursor.y = this.input.activePointer.y + this.cameras.main.scrollY;
@@ -507,6 +517,83 @@ class MainScene extends Phaser.Scene {
         this.sound.play('reload', { volume: 0.20 });
     }
 
+
+    doSlashAttack() {
+        this.weapon.body.enable = true;
+        
+        // Set cooldown
+        this.slashCooldown = true;
+        
+        // Visual feedback for cooldown
+        const cooldownText = this.add.text(this.player.x, this.player.y - 50, 'Slash Cooldown', {
+            fontSize: '16px',
+            fill: '#ff0000'
+        }).setOrigin(0.5);
+        
+        // Store original position
+        const originalX = this.weapon.x;
+        const originalY = this.weapon.y;
+        
+        // Calculate positions for the wide slash
+        const topOffset = 50;    // Distance for top position
+        const sideOffset = -75;   // Distance for side position
+        const bottomOffset = 50; // Distance for bottom position
+    
+        // First tween: Move to top position and rotate
+        this.tweens.add({
+            targets: this.weapon,
+            y: this.weapon.y - topOffset,
+            angle: 0,
+            duration: 100,
+            ease: 'Linear',
+            onComplete: () => {
+                // Second tween: Sweep to left position
+                this.tweens.add({
+                    targets: this.weapon,
+                    x: this.weapon.x - sideOffset,
+                    y: originalY,
+                    angle: -90,
+                    duration: 150,
+                    ease: 'Linear',
+                    onComplete: () => {
+                        // Third tween: Sweep to bottom position
+                        this.tweens.add({
+                            targets: this.weapon,
+                            x: originalX,
+                            y: this.weapon.y + bottomOffset,
+                            angle: -180,
+                            duration: 150,
+                            ease: 'Linear',
+                            onComplete: () => {
+                                // Final tween: Return to original position
+                                this.tweens.add({
+                                    targets: this.weapon,
+                                    x: originalX,
+                                    y: originalY,
+                                    angle: 0,
+                                    duration: 100,
+                                    ease: 'Linear',
+                                    onComplete: () => {
+                                        this.weapon.body.enable = false;
+                                    }
+                                });
+                            }
+                        });
+                    }
+                });
+            }
+        });
+        
+        // Remove cooldown text after 1 second
+        this.time.delayedCall(1000, () => {
+            cooldownText.destroy();
+        });
+        
+        // Reset cooldown after 4 seconds
+        this.time.delayedCall(4000, () => {
+            this.slashCooldown = false;
+        });
+    }
 
     shootProjectile(pointer) {
         if (this.gameOver) return;
@@ -670,17 +757,46 @@ class MainScene extends Phaser.Scene {
     hitEnemy(weapon, enemy) {
         if (!enemy.isHit) {
             enemy.isHit = true;
+            
+            // Check if this is from a slash attack
+            const damage = this.slashCooldown ? this.slashDamage : 1;
+            
             if (weapon === 'projectile') {
                 this.sound.play('bullet_hit', { volume: 0.20 });
             } else {
                 this.sound.play('hitSound', { volume: 0.20 });
             }
-            enemy.hitPoints--;
+            
+            // Apply damage
+            enemy.hitPoints -= damage;
             enemy.healthText.setText(enemy.hitPoints.toString());
-
+    
+            // Create time freeze effect if it's a slash attack
+            if (this.slashCooldown) {
+                // Slow down time
+                this.time.timeScale = 0.8; // Slow everything to 80% speed
+    
+                // Add a slight desaturation or color tint to everything
+                const enemies = this.enemies.getChildren();
+                enemies.forEach(e => {
+                    e.setTint(0xcccccc);
+                });
+    
+                // Return to normal after a short delay
+                this.time.delayedCall(200, () => { // 200ms in real time (feels longer due to time scale)
+                    this.time.timeScale = 1; // Return to normal speed
+                    enemies.forEach(e => {
+                        e.clearTint();
+                    });
+                });
+    
+                // Add extra screen shake during time freeze
+                this.cameras.main.shake(300, 0.004);
+            }
+    
             // Add blood effect at enemy position
             createBloodEffect(enemy.x, enemy.y, this.bloodEffects, this.tweens);
-
+    
             // Check if what weapon hit the enemy
             if (weapon !== 'projectile') {
                 // Calculate knockback direction from player to enemy
@@ -688,17 +804,14 @@ class MainScene extends Phaser.Scene {
                     this.player.x, this.player.y,
                     enemy.x, enemy.y
                 );
-
+    
                 // Apply knockback force
-                const knockbackForce = 500; // Adjust this value for stronger/weaker knockback
+                const knockbackForce = this.slashCooldown ? 700 : 500; // Extra knockback for slash attack
                 enemy.body.setVelocity(
                     Math.cos(angle) * knockbackForce,
                     Math.sin(angle) * knockbackForce
                 );
-
-                 // Add screen shake
-                this.cameras.main.shake(100, 0.002);
-
+    
                 // Add jitter effect to the enemy
                 this.tweens.add({
                     targets: enemy,
@@ -709,9 +822,8 @@ class MainScene extends Phaser.Scene {
                     repeat: 2,
                     ease: 'Linear'
                 });
-
             }
-
+    
             this.tweens.add({
                 targets: enemy,
                 tint: 0xff0000,
@@ -723,7 +835,7 @@ class MainScene extends Phaser.Scene {
                         // Add chance to drop ammo (30% chance)
                         if (Phaser.Math.Between(1, 100) <= 30) {
                             const ammo = this.ammoDrops.create(enemy.x, enemy.y, 'ammo');
-                            ammo.setScale(0.8); // Adjust scale as needed
+                            ammo.setScale(0.8);
                         }
                         enemy.healthText.destroy();
                         enemy.destroy();
