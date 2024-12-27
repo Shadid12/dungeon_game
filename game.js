@@ -12,6 +12,7 @@ class MainScene extends Phaser.Scene {
         this.load.audio('damage3', 'assets/damage3.wav');
         // this.load.audio('retro_metal', 'assets/retro_metal.ogg');
         this.load.audio('goblin_theme', 'assets/goblin_theme.wav');
+        this.load.audio('empty_gun', 'assets/empty.mp3');
 
         this.load.image('blood', 'assets/blood_1.png');
 
@@ -67,6 +68,8 @@ class MainScene extends Phaser.Scene {
 
         // Add damage flash overlay property
         this.damageFlash = null;
+
+        this.bulletCount = 100;
     }
 
     create() {
@@ -99,6 +102,7 @@ class MainScene extends Phaser.Scene {
         });
 
         this.gameOver = false;
+        this.bulletCount = 100;
 
         // Add this after other group creations
         this.bloodEffects = this.add.group();
@@ -179,6 +183,13 @@ class MainScene extends Phaser.Scene {
         );
         
         this.healthText = this.add.text(16, 16, 'Health: 10', {
+            fontSize: '32px',
+            fill: '#fff',
+            backgroundColor: '#000',
+            padding: { x: 10, y: 5 }
+        }).setScrollFactor(0);
+
+        this.bulletText = this.add.text(16, 60, `Bullets: ${this.bulletCount}`, {
             fontSize: '32px',
             fill: '#fff',
             backgroundColor: '#000',
@@ -438,6 +449,11 @@ class MainScene extends Phaser.Scene {
 
     shootProjectile(pointer) {
         if (this.gameOver) return;
+
+        if (this.bulletCount <= 0) {
+            this.sound.play('empty_gun', { volume: 0.20 });
+            return;
+        }
     
         // Get world position of pointer
         const worldPoint = pointer.position;
@@ -469,6 +485,9 @@ class MainScene extends Phaser.Scene {
         this.time.delayedCall(500, () => {
             projectile.destroy();
         });
+
+        this.bulletCount--;
+        this.bulletText.setText(`Bullets: ${this.bulletCount}`);
     }
 
     screenShake() {
