@@ -29,6 +29,11 @@ class MainScene extends Phaser.Scene {
         this.load.image('goblin_run4', 'assets/goblin/goblin_run4.png');
         this.load.image('goblin_run5', 'assets/goblin/goblin_run5.png');
 
+        // Load ammo icon
+        this.load.image('ammo', 'assets/ammo.png');
+        // reload sound
+        this.load.audio('reload', 'assets/reload.mp3');
+
 
         // Create a custom cursor texture programmatically
         const cursorGraphics = this.add.graphics();
@@ -70,6 +75,7 @@ class MainScene extends Phaser.Scene {
         this.damageFlash = null;
 
         this.bulletCount = 100;
+        this.ammo = null;
     }
 
     create() {
@@ -278,6 +284,11 @@ class MainScene extends Phaser.Scene {
         this.damageFlash.setAlpha(0);
         this.damageFlash.setScrollFactor(0);
         this.damageFlash.setDepth(999); // Make sure it's above everything except the cursor
+
+        this.ammoDrops = this.physics.add.group();
+    
+        // Add collision detection for ammo pickup
+        this.physics.add.overlap(this.player, this.ammoDrops, this.collectAmmo, null, this);
         
     }
 
@@ -423,6 +434,13 @@ class MainScene extends Phaser.Scene {
         this.cursor.y = this.input.activePointer.y + this.cameras.main.scrollY;
 
         
+    }
+
+    collectAmmo(player, ammo) {
+        ammo.destroy();
+        this.bulletCount += 20;
+        this.bulletText.setText(`Bullets: ${this.bulletCount}`);
+        this.sound.play('reload', { volume: 0.20 });
     }
 
     createBloodEffect(x, y) {
@@ -659,6 +677,11 @@ class MainScene extends Phaser.Scene {
                 onComplete: () => {
                     enemy.isHit = false;
                     if (enemy.hitPoints <= 0) {
+                        // Add chance to drop ammo (30% chance)
+                        if (Phaser.Math.Between(1, 100) <= 30) {
+                            const ammo = this.ammoDrops.create(enemy.x, enemy.y, 'ammo');
+                            ammo.setScale(0.8); // Adjust scale as needed
+                        }
                         enemy.healthText.destroy();
                         enemy.destroy();
                     }
