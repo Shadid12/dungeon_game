@@ -65,7 +65,7 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
 
         // Reduce player health and update UI
         this.health--;
-        this.scene.healthText.setText('Health: ' + this.health);
+        this.scene.updateHealthDisplay(this.health);
 
         // Set player temporarily invulnerable
         this.isInvulnerable = true;

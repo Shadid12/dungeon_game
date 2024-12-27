@@ -30,6 +30,11 @@ class MainScene extends Phaser.Scene {
         this.load.image('goblin_run4', 'assets/goblin/goblin_run4.png');
         this.load.image('goblin_run5', 'assets/goblin/goblin_run5.png');
 
+        // Load heart animation frames correctly
+        for (let i = 1; i <= 8; i++) {
+            this.load.image(`heart${i}`, `assets/heart/Cuore${i}.png`);
+        }
+
         // Load ammo icon
         this.load.image('ammo', 'assets/ammo.png');
         // reload sound
@@ -108,6 +113,57 @@ class MainScene extends Phaser.Scene {
             frameRate: 8,
             repeat: -1
         });
+
+         // Create heart animation
+        this.anims.create({
+            key: 'heartBeat',
+            frames: [
+                { key: 'heart1' },
+                { key: 'heart2' },
+                { key: 'heart3' },
+                { key: 'heart4' },
+                { key: 'heart5' },
+                { key: 'heart6' },
+                { key: 'heart7' },
+                { key: 'heart8' }
+            ],
+            frameRate: 12,
+            repeat: -1
+        });
+
+        // Create heart container
+        this.healthDisplay = this.add.container(16, 8);
+        this.healthDisplay.setScrollFactor(0);
+        this.healthDisplay.setDepth(999);
+
+        // Create the animated heart sprite
+        this.heartSprite = this.add.sprite(32, 32, 'heart1');
+        this.heartSprite.setScale(2);  // Adjust scale as needed
+        this.heartSprite.play('heartBeat');
+        
+        // Add heart sprite to the container
+        this.healthDisplay.add(this.heartSprite);
+
+
+        // Add health number next to the heart
+        this.healthNumber = this.add.text(64, 18, '10', {
+            fontSize: '16px',  // Smaller base size
+            fill: '#ffffff',
+            fontFamily: 'monospace, "Courier New"',
+            stroke: '#000000',
+            strokeThickness: 3,
+            shadow: {
+                offsetX: 1,
+                offsetY: 1,
+                color: '#000000',
+                blur: 0,
+                fill: true
+            }
+        }).setFontStyle('bold');
+
+        this.healthNumber.setScale(2);
+        this.healthNumber.setScrollFactor(0);
+        this.healthNumber.setDepth(999);
 
         this.gameOver = false;
         this.bulletCount = 100;
@@ -189,13 +245,20 @@ class MainScene extends Phaser.Scene {
             this.worldHeight / 2,        // Y position
             'player'                     // Texture key
         );
+
+        // Update the player hit function to update health display
+        this.updateHealthDisplay = (health) => {
+            this.healthNumber.setText(health.toString());
+            
+            // Optional: Add effects when health changes
+            this.tweens.add({
+                targets: this.heartSprite,
+                scale: { from: 2.5, to: 2 },
+                duration: 200,
+                ease: 'Bounce.Out'
+            });
+        };
         
-        this.healthText = this.add.text(16, 16, 'Health: 10', {
-            fontSize: '32px',
-            fill: '#fff',
-            backgroundColor: '#000',
-            padding: { x: 10, y: 5 }
-        }).setScrollFactor(0);
 
         this.bulletText = this.add.text(16, 60, `Bullets: ${this.bulletCount}`, {
             fontSize: '32px',
@@ -250,7 +313,6 @@ class MainScene extends Phaser.Scene {
         this.physics.add.overlap(
             this.player,
             this.enemies,
-            // Instead of this.playerHitByEnemy, call the method on the Player instance:
             (player, enemy) => {
                 player.playerHitByEnemy(enemy);
             },
