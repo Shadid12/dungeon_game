@@ -90,6 +90,8 @@ class MainScene extends Phaser.Scene {
 
         this.currentWeapon = 'sword';
         this.weaponSwitchCooldown = false;
+
+        this.facingRight = false;
     }
 
     create() {
@@ -193,6 +195,7 @@ class MainScene extends Phaser.Scene {
         // Create the cursor sprite and make it follow the pointer
         this.cursor = this.add.sprite(0, 0, 'cursor');
         this.cursor.setDepth(999); // Make sure it's always on top
+        this.cursor.setVisible(false);
         
         // Update cursor position in the game loop
         this.input.on('pointermove', (pointer) => {
@@ -420,18 +423,31 @@ class MainScene extends Phaser.Scene {
         if (Phaser.Input.Keyboard.JustDown(this.tabKey)) {
             this.switchWeapon();
         }
+
+        
         
         this.player.body.setVelocity(0);
 
-        // Calculate weapon offset based on an angle
-        const weaponOffsetX = -40;  // Horizontal distance from player
-        const weaponOffsetY = -10;   // Vertical distance from player
+        // Check horizontal movement
+        if (this.moveKeys.right.isDown) {
+            this.facingRight = true;
+        } else if (this.moveKeys.left.isDown) {
+            this.facingRight = false;
+        }
+
+        // Set weapon position based on facing direction
+        const weaponOffsetX = this.facingRight ? 40 : -40;
+        const weaponOffsetY = -10;   // Vertical offset stays constant
         const targetX = this.player.x + weaponOffsetX;
         const targetY = this.player.y + weaponOffsetY;
+        
 
         const lerpFactor = 0.1;
         this.weapon.x = Phaser.Math.Linear(this.weapon.x, targetX, lerpFactor);
         this.weapon.y = Phaser.Math.Linear(this.weapon.y, targetY, lerpFactor);
+
+
+        this.weapon.setFlipX(this.facingRight);
 
         const gunOffsetX = 20;  // Horizontal distance from player
         const gunOffsetY = -10;   // Vertical distance from player
@@ -579,6 +595,9 @@ class MainScene extends Phaser.Scene {
     
         if (this.currentWeapon === 'gun') {
             this.currentWeapon = 'sword';
+
+            // Hide cursor when switching to sword
+            this.cursor.setVisible(false);
             
             // Hide ammo display
             this.ammoDisplay.setVisible(false);
@@ -609,6 +628,9 @@ class MainScene extends Phaser.Scene {
             
         } else {
             this.currentWeapon = 'gun';
+
+            // Show cursor when switching to gun
+            this.cursor.setVisible(true);
             
             // Show ammo display
             this.ammoDisplay.setVisible(true);
@@ -688,11 +710,8 @@ class MainScene extends Phaser.Scene {
 
     doSlashAttack() {
         this.weapon.body.enable = true;
-        
-        // Set cooldown
         this.slashCooldown = true;
         
-        // Visual feedback for cooldown
         const cooldownText = this.add.text(this.player.x, this.player.y - 50, 'Slash Cooldown', {
             fontSize: '16px',
             fill: '#ff0000'
@@ -703,24 +722,29 @@ class MainScene extends Phaser.Scene {
         const originalY = this.weapon.y;
         
         // Calculate positions for the wide slash
-        const topOffset = 50;    // Distance for top position
-        const sideOffset = -75;   // Distance for side position
-        const bottomOffset = 50; // Distance for bottom position
+        const topOffset = 50;
+        const sideOffset = this.facingRight ? 75 : -75;  // Flip the side offset based on direction
+        const bottomOffset = 50;
     
+        // Adjust angles based on facing direction
+        const angles = this.facingRight ? 
+            { start: 0, middle: 90, end: 180 } : 
+            { start: 0, middle: -90, end: -180 };
+        
         // First tween: Move to top position and rotate
         this.tweens.add({
             targets: this.weapon,
             y: this.weapon.y - topOffset,
-            angle: 0,
+            angle: angles.start,
             duration: 100,
             ease: 'Linear',
             onComplete: () => {
-                // Second tween: Sweep to left position
+                // Second tween: Sweep to side position
                 this.tweens.add({
                     targets: this.weapon,
-                    x: this.weapon.x - sideOffset,
+                    x: this.weapon.x + sideOffset,
                     y: originalY,
-                    angle: -90,
+                    angle: angles.middle,
                     duration: 150,
                     ease: 'Linear',
                     onComplete: () => {
@@ -729,7 +753,7 @@ class MainScene extends Phaser.Scene {
                             targets: this.weapon,
                             x: originalX,
                             y: this.weapon.y + bottomOffset,
-                            angle: -180,
+                            angle: angles.end,
                             duration: 150,
                             ease: 'Linear',
                             onComplete: () => {
@@ -859,10 +883,14 @@ class MainScene extends Phaser.Scene {
   
     doMeleeAttack() {
         this.weapon.body.enable = true;
-
+    
+        // Adjust rotation based on facing direction
+        const startAngle = this.facingRight ? 0 : 0;
+        const endAngle = this.facingRight ? 120 : -120;
+    
         this.tweens.add({
             targets: this.weapon,
-            angle: { from: 0, to: -120 },
+            angle: { from: startAngle, to: endAngle },
             duration: 190,
             yoyo: true,
             onComplete: () => {
