@@ -87,6 +87,9 @@ class MainScene extends Phaser.Scene {
         this.slashCooldown = false;
         this.slashDamage = 3;
         this.healthDrops = null;
+
+        this.currentWeapon = 'sword';
+        this.weaponSwitchCooldown = false;
     }
 
     create() {
@@ -222,7 +225,7 @@ class MainScene extends Phaser.Scene {
 
         // Add mouse input
         this.input.on('pointerdown', (pointer) => {
-            if (pointer.leftButtonDown()) {
+            if (pointer.leftButtonDown() && this.currentWeapon === 'gun') {  // Only shoot if gun is selected
                 this.shootProjectile(pointer);
             }
         });
@@ -262,14 +265,6 @@ class MainScene extends Phaser.Scene {
                 ease: 'Bounce.Out'
             });
         };
-        
-
-        this.bulletText = this.add.text(16, 60, `Bullets: ${this.bulletCount}`, {
-            fontSize: '32px',
-            fill: '#fff',
-            backgroundColor: '#000',
-            padding: { x: 10, y: 5 }
-        }).setScrollFactor(0);
 
         this.physics.add.existing(this.player);
         this.physics.add.collider(this.player, this.terrain);
@@ -366,12 +361,63 @@ class MainScene extends Phaser.Scene {
     
         // Add collision for health pickup
         this.physics.add.overlap(this.player, this.healthDrops, this.collectHealth, null, this);
+
+
+        this.ammoDisplay = this.add.container(34, 70);
+        this.ammoDisplay.setScrollFactor(0);
+
+        // Create ammo icon
+        this.ammoIcon = this.add.sprite(0, 0, 'ammo');
+        this.ammoIcon.setScale(0.8);
+        this.ammoIcon.setOrigin(0, 0.5);
+
+        // Create bullet count text
+        this.bulletText = this.add.text(30, 0, `${this.bulletCount}`, {
+            fontSize: '16px',  // Smaller base size like health text
+            fill: '#ffffff',
+            fontFamily: 'monospace, "Courier New"',
+            stroke: '#000000',
+            strokeThickness: 3,
+            shadow: {
+                offsetX: 1,
+                offsetY: 1,
+                color: '#000000',
+                blur: 0,
+                fill: true
+            }
+        }).setOrigin(0, 0.5).setScale(2); // Scale up like health text
+
+        // Add both to the container
+        this.ammoDisplay.add([this.ammoIcon, this.bulletText]);
+
+        // Initially hide ammo display since sword is selected first
+        this.ammoDisplay.setVisible(false);
+
+        // When setting initial visibility of weapons
+        this.gun.setVisible(false);
+        this.weapon.setVisible(true);
+
+        // Set initial weapon visibility based on currentWeapon
+        if (this.currentWeapon === 'gun') {
+            this.weapon.setVisible(false);
+            this.gun.setVisible(true);
+        } else {
+            this.weapon.setVisible(true);
+            this.gun.setVisible(false);
+        }
+
+        // Add Tab key binding
+        this.tabKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.TAB);
         
     }
 
     update() {
         if (this.gameOver) {
             return;
+        }
+
+        if (Phaser.Input.Keyboard.JustDown(this.tabKey)) {
+            this.switchWeapon();
         }
         
         this.player.body.setVelocity(0);
@@ -502,11 +548,11 @@ class MainScene extends Phaser.Scene {
       
         this.player.update(cameraBounds);
         
-        if (Phaser.Input.Keyboard.JustDown(this.spaceBar)) {
+        if (Phaser.Input.Keyboard.JustDown(this.spaceBar) && this.currentWeapon === 'sword') {  // Only melee if sword is selected
             this.doMeleeAttack();
         }
 
-        if (Phaser.Input.Keyboard.JustDown(this.qKey) && !this.slashCooldown) {
+        if (Phaser.Input.Keyboard.JustDown(this.qKey) && !this.slashCooldown && this.currentWeapon === 'sword') {  // Only slash if sword is selected
             this.doSlashAttack();
         }
 
@@ -520,8 +566,97 @@ class MainScene extends Phaser.Scene {
     collectAmmo(player, ammo) {
         ammo.destroy();
         this.bulletCount += 20;
-        this.bulletText.setText(`Bullets: ${this.bulletCount}`);
         this.sound.play('reload', { volume: 0.20 });
+    }
+
+
+    switchWeapon() {
+        if (this.weaponSwitchCooldown) return;
+    
+        this.weaponSwitchCooldown = true;
+        // this.sound.play('weapon_switch', { volume: 0.2 });
+    
+        if (this.currentWeapon === 'gun') {
+            this.currentWeapon = 'sword';
+            
+            // Hide ammo display
+            this.ammoDisplay.setVisible(false);
+    
+            // Animate gun out
+            this.tweens.add({
+                targets: this.gun,
+                alpha: 0,
+                y: this.gun.y - 20,
+                duration: 200,
+                onComplete: () => {
+                    this.gun.setVisible(false);
+                    this.gun.setAlpha(1);
+                    this.gun.y += 20;
+                }
+            });
+    
+            // Animate sword in
+            this.weapon.setAlpha(0);
+            this.weapon.setVisible(true);
+            this.weapon.y += 20;
+            this.tweens.add({
+                targets: this.weapon,
+                alpha: 1,
+                y: this.weapon.y - 20,
+                duration: 200
+            });
+            
+        } else {
+            this.currentWeapon = 'gun';
+            
+            // Show ammo display
+            this.ammoDisplay.setVisible(true);
+    
+            // Animate sword out
+            this.tweens.add({
+                targets: this.weapon,
+                alpha: 0,
+                y: this.weapon.y - 20,
+                duration: 200,
+                onComplete: () => {
+                    this.weapon.setVisible(false);
+                    this.weapon.setAlpha(1);
+                    this.weapon.y += 20;
+                }
+            });
+    
+            // Animate gun in
+            this.gun.setAlpha(0);
+            this.gun.setVisible(true);
+            this.gun.y += 20;
+            this.tweens.add({
+                targets: this.gun,
+                alpha: 1,
+                y: this.gun.y - 20,
+                duration: 200
+            });
+        }
+    
+        // Add visual feedback
+        const switchText = this.add.text(this.player.x, this.player.y - 50, 'Weapon Switched!', {
+            fontSize: '16px',
+            fill: '#fff',
+            backgroundColor: '#000',
+            padding: { x: 5, y: 2 }
+        }).setOrigin(0.5);
+    
+        this.tweens.add({
+            targets: switchText,
+            alpha: 0,
+            y: switchText.y - 20,
+            duration: 1000,
+            onComplete: () => switchText.destroy()
+        });
+    
+        // Reset cooldown after 500ms
+        this.time.delayedCall(500, () => {
+            this.weaponSwitchCooldown = false;
+        });
     }
 
     // Add health collection method
@@ -667,7 +802,7 @@ class MainScene extends Phaser.Scene {
         });
 
         this.bulletCount--;
-        this.bulletText.setText(`Bullets: ${this.bulletCount}`);
+        this.bulletText.setText(`${this.bulletCount}`);
     }
 
     screenShake() {
