@@ -69,3 +69,48 @@ export function createEnemy(scene, x, y, enemiesGroup) {
 
     return enemy;
 }
+
+
+// At the bottom of util.js (or anywhere you like in that file):
+
+export function spawnEnemies(scene) {
+    if (scene.gameOver) {
+        return;
+    }
+
+    const MIN_SPAWN_DISTANCE = 400; // Minimum distance from player (in pixels)
+    const MAX_ATTEMPTS = 10; // Maximum attempts to find a valid spawn position
+
+    for (let i = 0; i < 5; i++) {
+        let validPosition = false;
+        let attempts = 0;
+        let x, y;
+
+        // Keep trying until we find a valid position or run out of attempts
+        while (!validPosition && attempts < MAX_ATTEMPTS) {
+            // Generate random position
+            x = Phaser.Math.Between(50, scene.worldWidth - 50);
+            y = Phaser.Math.Between(50, scene.worldHeight - 50);
+
+            // Calculate distance from player
+            const distance = Phaser.Math.Distance.Between(
+                x, 
+                y,
+                scene.player.x, 
+                scene.player.y
+            );
+
+            // Check if position is far enough from player
+            if (distance >= MIN_SPAWN_DISTANCE) {
+                validPosition = true;
+            }
+
+            attempts++;
+        }
+
+        // Only create enemy if we found a valid position
+        if (validPosition) {
+            createEnemy(scene, x, y, scene.enemies);
+        }
+    }
+}

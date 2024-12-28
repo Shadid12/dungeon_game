@@ -1,6 +1,6 @@
 import Player from './player.js';
 import MenuScene from './menu.js';
-import { createBloodEffect, createEnemy  } from './utils.js';
+import { createBloodEffect, createEnemy, spawnEnemies } from './utils.js';
 
 class MainScene extends Phaser.Scene {
     preload() {
@@ -336,8 +336,7 @@ class MainScene extends Phaser.Scene {
         // Adjust spawn timer for larger map (more frequent spawns)
         this.time.addEvent({
             delay: 3000,  // Spawn every 3 seconds
-            callback: this.spawnEnemies,
-            callbackScope: this,
+            callback: () => spawnEnemies(this),
             loop: true
         });
 
@@ -838,47 +837,6 @@ class MainScene extends Phaser.Scene {
         projectile.destroy();
         // Reuse existing hitEnemy logic but pass null as weapon
         this.hitEnemy('projectile', enemy);
-    }
-    
-    // The rest of the methods remain unchanged
-    spawnEnemies() {
-        if (this.gameOver) {
-            return;
-        }
-    
-        const MIN_SPAWN_DISTANCE = 400; // Minimum distance from player (in pixels)
-        const MAX_ATTEMPTS = 10; // Maximum attempts to find a valid spawn position
-    
-        for (let i = 0; i < 5; i++) {
-            let validPosition = false;
-            let attempts = 0;
-            let x, y;
-    
-            // Keep trying until we find a valid position or run out of attempts
-            while (!validPosition && attempts < MAX_ATTEMPTS) {
-                // Generate random position
-                x = Phaser.Math.Between(50, this.worldWidth - 50);
-                y = Phaser.Math.Between(50, this.worldHeight - 50);
-    
-                // Calculate distance from player
-                const distance = Phaser.Math.Distance.Between(
-                    x, y,
-                    this.player.x, this.player.y
-                );
-    
-                // Check if position is far enough from player
-                if (distance >= MIN_SPAWN_DISTANCE) {
-                    validPosition = true;
-                }
-    
-                attempts++;
-            }
-    
-            // Only create enemy if we found a valid position
-            if (validPosition) {
-                createEnemy(this, x, y, this.enemies);
-            }
-        }
     }
   
     doMeleeAttack() {
