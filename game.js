@@ -1,19 +1,16 @@
 import Player from './player.js';
 import MenuScene from './menu.js';
-import { createBloodEffect, createEnemy, spawnEnemies } from './utils.js';
+import { createBloodEffect, createEnemy, spawnEnemies  } from './utils.js';
+import AssetLoader from './assetLoader.js';
 
 class MainScene extends Phaser.Scene {
     preload() {
+        // Load Audio
+        AssetLoader.loadAudio(this);
+
         // Load the assets
         this.load.image('sword', 'assets/sword.png');
-        this.load.audio('hitSound', 'assets/hit.wav');
         this.load.image('gun', 'assets/gun.png');
-        this.load.audio('damage', 'assets/damage.wav');
-        this.load.audio('damage2', 'assets/damage2.wav');
-        this.load.audio('damage3', 'assets/damage3.wav');
-        // this.load.audio('retro_metal', 'assets/retro_metal.ogg');
-        this.load.audio('goblin_theme', 'assets/goblin_theme.wav');
-        this.load.audio('empty_gun', 'assets/empty.mp3');
 
         this.load.image('blood', 'assets/blood_1.png');
 
@@ -38,8 +35,6 @@ class MainScene extends Phaser.Scene {
         // Load ammo icon
         this.load.image('ammo', 'assets/ammo.png');
         // reload sound
-        this.load.audio('reload', 'assets/reload.mp3');
-        this.load.audio('bullet_hit', 'assets/bullet_hit.mp3');
 
 
         // Create a custom cursor texture programmatically
