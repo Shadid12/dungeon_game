@@ -1,6 +1,6 @@
 import Player from './player.js';
 import MenuScene from './menu.js';
-import { createBloodEffect } from './utils.js';
+import { createBloodEffect, createEnemy  } from './utils.js';
 
 class MainScene extends Phaser.Scene {
     preload() {
@@ -173,7 +173,7 @@ class MainScene extends Phaser.Scene {
         this.healthNumber.setDepth(999);
 
         this.gameOver = false;
-        this.bulletCount = 100;
+        this.bulletCount = 10;
 
         // Add this after other group creations
         this.bloodEffects = this.add.group();
@@ -295,6 +295,7 @@ class MainScene extends Phaser.Scene {
         this.weapon.setOrigin(0.5, 0.5);
         
         this.physics.add.existing(this.weapon);
+        this.weapon.body.enable = false; // Disable the physics body by default
         
         this.spaceBar = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
         
@@ -302,11 +303,11 @@ class MainScene extends Phaser.Scene {
         this.enemies = this.physics.add.group();
         
         // Create initial enemies spread across the map
-        this.createEnemy(400, 400);
-        this.createEnemy(400, 800);
-        this.createEnemy(2000, 1000);
-        this.createEnemy(600, 1500);
-        this.createEnemy(1800, 400);
+        createEnemy(this, 400, 400, this.enemies);
+        createEnemy(this, 400, 800, this.enemies);
+        createEnemy(this, 2000, 1000, this.enemies);
+        createEnemy(this, 600, 1500, this.enemies);
+        createEnemy(this, 1800, 400, this.enemies);
 
         this.physics.add.overlap(this.weapon, this.enemies, this.hitEnemy, null, this);
         this.physics.add.overlap(
@@ -851,60 +852,9 @@ class MainScene extends Phaser.Scene {
     
             // Only create enemy if we found a valid position
             if (validPosition) {
-                this.createEnemy(x, y);
+                createEnemy(this, x, y, this.enemies);
             }
         }
-    }
-
-    createEnemy(x, y) {
-        const enemy = this.physics.add.sprite(x, y, 'goblin1');
-        // Start the idle animation
-        enemy.play('goblin_idle');
-
-        enemy.setScale(0.2); // Scale down the enemy
-
-        enemy.hitPoints = 3;
-        enemy.detectionRadius = 200;
-        enemy.moveSpeed = 100;
-
-        enemy.maxSpeed = 140;
-        
-        // Add health text above the goblin
-        enemy.healthText = this.add.text(x, y - 40, '3', { // Adjusted y offset for the sprite
-            fontSize: '16px',
-            fill: '#fff',
-            backgroundColor: '#000',
-            padding: { x: 2, y: 2 }
-        });
-        enemy.healthText.setOrigin(0.5);
-
-        // Add update listener for flipping the sprite based on movement direction
-        enemy.updateDirection = () => {
-            const isMoving = enemy.body.velocity.length() > 0;
-        
-            // Update animation based on movement
-            if (isMoving) {
-                if (enemy.anims.currentAnim?.key !== 'goblin_run') {
-                    enemy.play('goblin_run');
-                    // enemy.setScale(0.8); // Scale up the enemy
-                }
-            } else {
-                if (enemy.anims.currentAnim?.key !== 'goblin_idle') {
-                    enemy.play('goblin_idle');
-                    // enemy.setScale(0.2);
-                }
-            }
-
-            // Handle sprite flipping based on velocity
-            if (enemy.body.velocity.x < 0) {
-                enemy.setFlipX(true);
-            } else if (enemy.body.velocity.x > 0) {
-                enemy.setFlipX(false);
-            }
-        };
-        
-        this.enemies.add(enemy);
-        return enemy;
     }
   
     doMeleeAttack() {
