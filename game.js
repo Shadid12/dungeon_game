@@ -96,6 +96,11 @@ class MainScene extends Phaser.Scene {
 
     create() {
 
+        // Add these lines right here, at the start of create()
+        this.game.canvas.addEventListener('contextmenu', (e) => {
+            e.preventDefault();
+        });
+
         // Create animation for goblins
         this.anims.create({
             key: 'goblin_idle',
@@ -228,8 +233,14 @@ class MainScene extends Phaser.Scene {
 
         // Add mouse input
         this.input.on('pointerdown', (pointer) => {
-            if (pointer.leftButtonDown() && this.currentWeapon === 'gun') {  // Only shoot if gun is selected
-                this.shootProjectile(pointer);
+            if (pointer.leftButtonDown()) {
+                if (this.currentWeapon === 'gun') {
+                    this.shootProjectile(pointer);
+                } else if (this.currentWeapon === 'sword') {
+                    this.doMeleeAttack();
+                }
+            } else if (pointer.rightButtonDown() && this.currentWeapon === 'sword' && !this.slashCooldown) {
+                this.doSlashAttack();
             }
         });
 
@@ -300,7 +311,6 @@ class MainScene extends Phaser.Scene {
         this.physics.add.existing(this.weapon);
         this.weapon.body.enable = false; // Disable the physics body by default
         
-        this.spaceBar = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
         
         // Initialize enemies with more spread across the map
         this.enemies = this.physics.add.group();
@@ -357,8 +367,6 @@ class MainScene extends Phaser.Scene {
         // Add collision detection for ammo pickup
         this.physics.add.overlap(this.player, this.ammoDrops, this.collectAmmo, null, this);
 
-        // Add Q key for slash attack
-        this.qKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.Q);
 
         // Create health drops group
         this.healthDrops = this.physics.add.group();
@@ -564,14 +572,6 @@ class MainScene extends Phaser.Scene {
         };
       
         this.player.update(cameraBounds);
-        
-        if (Phaser.Input.Keyboard.JustDown(this.spaceBar) && this.currentWeapon === 'sword') {  // Only melee if sword is selected
-            this.doMeleeAttack();
-        }
-
-        if (Phaser.Input.Keyboard.JustDown(this.qKey) && !this.slashCooldown && this.currentWeapon === 'sword') {  // Only slash if sword is selected
-            this.doSlashAttack();
-        }
 
         // Update cursor position relative to camera
         this.cursor.x = this.input.activePointer.x + this.cameras.main.scrollX;
