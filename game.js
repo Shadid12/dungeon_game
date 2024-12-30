@@ -142,7 +142,6 @@ class MainScene extends Phaser.Scene {
         
 
         this.gameOver = false;
-        this.bulletCount = 10;
 
         // Add this after other group creations
         this.bloodEffects = this.add.group();
@@ -533,6 +532,7 @@ class MainScene extends Phaser.Scene {
     collectAmmo(player, ammo) {
         ammo.destroy();
         this.bulletCount += 20;
+        this.updateBulletDisplay();  // Update display when collecting ammo
         this.sound.play('reload', { volume: 0.20 });
     }
 
@@ -630,6 +630,12 @@ class MainScene extends Phaser.Scene {
         this.time.delayedCall(500, () => {
             this.weaponSwitchCooldown = false;
         });
+    }
+
+    updateBulletDisplay() {
+        if (this.bulletText) {
+            this.bulletText.setText(`${this.bulletCount}`);
+        }
     }
 
 
@@ -752,7 +758,7 @@ class MainScene extends Phaser.Scene {
         });
 
         this.bulletCount--;
-        this.bulletText.setText(`${this.bulletCount}`);
+        this.updateBulletDisplay();
     }
 
     screenShake() {
