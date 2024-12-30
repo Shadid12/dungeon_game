@@ -2,27 +2,54 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
     constructor(scene, x, y, texture) {
         super(scene, x, y, texture);
 
-        // Store a reference to the scene so we can access scene variables/methods
+        // Store a reference to the scene
         this.scene = scene;
         
-        // Add the sprite to the scene
         scene.add.existing(this);
-        
-        // Enable physics for the player
         scene.physics.add.existing(this);
-        
-        // Optional: collide with world bounds
         this.setCollideWorldBounds(true);
 
-        // Initialize health and invulnerability on the player itself
-        this.health = 10;
+        // Initialize player stats
+        this.maxHealth = 10;
+        this.health = this.maxHealth;
         this.isInvulnerable = false;
+
+        // Create health display container
+        this.healthDisplay = scene.add.container(16, 8);
+        this.healthDisplay.setScrollFactor(0);
+        this.healthDisplay.setDepth(999);
+
+        // Create heart sprite
+        this.heartSprite = scene.add.sprite(32, 32, 'heart1');
+        this.heartSprite.setScale(2);
+        this.heartSprite.play('heartBeat');
+        this.healthDisplay.add(this.heartSprite);
+
+        // Create health number display
+        this.healthText = scene.add.text(64, 18, this.health.toString(), {
+            fontSize: '16px',
+            fill: '#ffffff',
+            fontFamily: 'monospace, "Courier New"',
+            stroke: '#000000',
+            strokeThickness: 3,
+            shadow: {
+                offsetX: 1,
+                offsetY: 1,
+                color: '#000000',
+                blur: 0,
+                fill: true
+            }
+        }).setFontStyle('bold');
+
+        this.healthText.setScale(2);
+        this.healthText.setScrollFactor(0);
+        this.healthText.setDepth(999);
     }
 
     update(cameraBounds) {
         if (!cameraBounds) return;
         
-        // Example clamp to camera
+        // Clamp to camera bounds
         this.x = Phaser.Math.Clamp(
             this.x,
             cameraBounds.left + this.width / 2,
@@ -35,17 +62,55 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
         );
     }
 
-    /**
-     * Handle when the player is overlapped by an enemy
-     */
+    collectHealth(healthPickup) {
+        if (this.health < this.maxHealth) {
+            this.health += 1;
+            this.updateHealthDisplay();
+            
+            // Add healing effect
+            this.scene.tweens.add({
+                targets: this.heartSprite,
+                scale: { from: 2.5, to: 2 },
+                duration: 200,
+                ease: 'Bounce.Out'
+            });
+            
+            // Optional: Add heal sound if you have one
+            // this.scene.sound.play('heal', { volume: 0.2 });
+        }
+
+        healthPickup.destroy();
+    }
+
+    updateHealthDisplay() {
+        this.healthText.setText(this.health.toString());
+        
+        // Add visual feedback
+        this.scene.tweens.add({
+            targets: this.heartSprite,
+            scale: { from: 2.5, to: 2 },
+            duration: 200,
+            ease: 'Bounce.Out'
+        });
+    }
+
     playerHitByEnemy(enemy) {
         // Make sure we can't take damage too frequently
-        if (this.isInvulnerable) return;
-
-        // If the game is already over, skip
-        if (this.scene.gameOver) {
-            return;
-        }
+        if (this.isInvulnerable || this.scene.gameOver) return;
+        
+        // Set invulnerable immediately to prevent multiple hits
+        this.isInvulnerable = true;
+        
+        // Add knockback to separate player from enemy immediately
+        const angle = Phaser.Math.Angle.Between(
+            enemy.x, enemy.y,
+            this.x, this.y
+        );
+        const knockbackForce = 200;
+        this.body.setVelocity(
+            Math.cos(angle) * knockbackForce,
+            Math.sin(angle) * knockbackForce
+        );
 
         // Shake the screen
         this.scene.screenShake();
@@ -65,9 +130,9 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
 
         // Reduce player health and update UI
         this.health--;
-        this.scene.updateHealthDisplay(this.health);
+        this.updateHealthDisplay();
 
-        // Set player temporarily invulnerable
+        // Set visual feedback for invulnerability
         this.isInvulnerable = true;
         this.alpha = 0.5;
 

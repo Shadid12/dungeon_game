@@ -139,40 +139,7 @@ class MainScene extends Phaser.Scene {
             frameRate: 12,
             repeat: -1
         });
-
-        // Create heart container
-        this.healthDisplay = this.add.container(16, 8);
-        this.healthDisplay.setScrollFactor(0);
-        this.healthDisplay.setDepth(999);
-
-        // Create the animated heart sprite
-        this.heartSprite = this.add.sprite(32, 32, 'heart1');
-        this.heartSprite.setScale(2);  // Adjust scale as needed
-        this.heartSprite.play('heartBeat');
         
-        // Add heart sprite to the container
-        this.healthDisplay.add(this.heartSprite);
-
-
-        // Add health number next to the heart
-        this.healthNumber = this.add.text(64, 18, '10', {
-            fontSize: '16px',  // Smaller base size
-            fill: '#ffffff',
-            fontFamily: 'monospace, "Courier New"',
-            stroke: '#000000',
-            strokeThickness: 3,
-            shadow: {
-                offsetX: 1,
-                offsetY: 1,
-                color: '#000000',
-                blur: 0,
-                fill: true
-            }
-        }).setFontStyle('bold');
-
-        this.healthNumber.setScale(2);
-        this.healthNumber.setScrollFactor(0);
-        this.healthNumber.setDepth(999);
 
         this.gameOver = false;
         this.bulletCount = 10;
@@ -261,19 +228,6 @@ class MainScene extends Phaser.Scene {
             this.worldHeight / 2,        // Y position
             'player'                     // Texture key
         );
-
-        // Update the player hit function to update health display
-        this.updateHealthDisplay = (health) => {
-            this.healthNumber.setText(health.toString());
-            
-            // Optional: Add effects when health changes
-            this.tweens.add({
-                targets: this.heartSprite,
-                scale: { from: 2.5, to: 2 },
-                duration: 200,
-                ease: 'Bounce.Out'
-            });
-        };
 
         this.physics.add.existing(this.player);
         this.physics.add.collider(this.player, this.terrain);
@@ -366,7 +320,9 @@ class MainScene extends Phaser.Scene {
         this.healthDrops = this.physics.add.group();
     
         // Add collision for health pickup
-        this.physics.add.overlap(this.player, this.healthDrops, this.collectHealth, null, this);
+        this.physics.add.overlap(this.player, this.healthDrops, (player, health) => {
+            player.collectHealth(health);
+        }, null, this);
 
 
         this.ammoDisplay = this.add.container(34, 70);
@@ -674,31 +630,6 @@ class MainScene extends Phaser.Scene {
         this.time.delayedCall(500, () => {
             this.weaponSwitchCooldown = false;
         });
-    }
-
-    // Add health collection method
-    collectHealth(player, health) {
-        health.destroy();
-        
-        // Get current health from the display
-        let currentHealth = parseInt(this.healthNumber.text);
-        
-        // Only heal if not at max health (10)
-        if (currentHealth < 10) {
-            currentHealth += 1;
-            this.healthNumber.setText(currentHealth.toString());
-            
-            // Add healing effect
-            this.tweens.add({
-                targets: this.heartSprite,
-                scale: { from: 2.5, to: 2 },
-                duration: 200,
-                ease: 'Bounce.Out'
-            });
-            
-            // Optional: Add a healing sound here if you have one
-            // this.sound.play('heal', { volume: 0.2 });
-        }
     }
 
 
