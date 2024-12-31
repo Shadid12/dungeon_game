@@ -27,6 +27,11 @@ class MainScene extends Phaser.Scene {
         this.load.image('goblin_run4', 'assets/goblin/goblin_run4.png');
         this.load.image('goblin_run5', 'assets/goblin/goblin_run5.png');
 
+        // Load player sprite
+        for (let i = 0; i <= 7; i++) {
+            this.load.image(`pug${i}`, `assets/pug/sprite_${i}.png`);
+        }
+
         // Load heart animation frames correctly
         for (let i = 1; i <= 8; i++) {
             this.load.image(`heart${i}`, `assets/heart/Cuore${i}.png`);
@@ -205,10 +210,6 @@ class MainScene extends Phaser.Scene {
             }
         });
 
-        // Create player graphics and texture (same as before)
-        const graphics = this.add.graphics();
-        graphics.fillStyle(0x0000FF);
-        graphics.fillRect(0, 0, 32, 32);
         
         // Create enemy texture
         const enemyGraphics = this.add.graphics();
@@ -217,15 +218,29 @@ class MainScene extends Phaser.Scene {
         enemyGraphics.generateTexture('enemy', 32, 32);
         enemyGraphics.destroy();
 
-        graphics.generateTexture('player', 32, 32);
-        graphics.destroy();
+
+        this.anims.create({
+            key: 'pug_idle',
+            frames: [
+                { key: 'pug0' },
+                { key: 'pug1' },
+                { key: 'pug2' },
+                { key: 'pug3' },
+                { key: 'pug4' },
+                { key: 'pug5' },
+                { key: 'pug6' },
+                { key: 'pug7' }
+            ],
+            frameRate: 10,
+            repeat: -1
+        });
 
         // Create a Player instance
         this.player = new Player(
             this,                         // Reference to the scene
             this.worldWidth / 2,         // X position
             this.worldHeight / 2,        // Y position
-            'player'                     // Texture key
+            'pug0'                     // Texture key
         );
 
         this.physics.add.existing(this.player);

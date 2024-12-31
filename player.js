@@ -9,6 +9,9 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
         scene.physics.add.existing(this);
         this.setCollideWorldBounds(true);
 
+        this.setScale(2); // Adjust scale as needed for your sprite size
+        this.play('pug_idle'); // Start the walking animation
+
         // Initialize player stats
         this.maxHealth = 10;
         this.health = this.maxHealth;
