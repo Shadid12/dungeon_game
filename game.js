@@ -311,12 +311,10 @@ class MainScene extends Phaser.Scene {
             projectile.destroy();
         });
 
-         // Create the gun
-         this.gun = this.add.sprite(this.player.x, this.player.y, 'gun');
-         // Set the origin to the gun's grip/rotation point (adjust these values based on your gun sprite)
-         this.gun.setOrigin(0.3, 0.5);
-         // You might need to adjust scale depending on your sprite size
-         this.gun.setScale(0.2);
+        // Gun setup
+        this.gun = this.add.sprite(this.player.x, this.player.y, 'gun');
+        this.gun.setOrigin(0.3, 0.5); // Adjust origin for better rotation
+        this.gun.setScale(0.2);       // Adjust scale to match your player size
 
 
         this.damageFlash = this.add.rectangle(0, 0, this.worldWidth * 2, this.worldHeight * 2, 0xff0000);
@@ -414,29 +412,58 @@ class MainScene extends Phaser.Scene {
         const targetY = this.player.y + weaponOffsetY;
         
 
-        const lerpFactor = 0.1;
-        this.weapon.x = Phaser.Math.Linear(this.weapon.x, targetX, lerpFactor);
-        this.weapon.y = Phaser.Math.Linear(this.weapon.y, targetY, lerpFactor);
+        this.weapon.x = Phaser.Math.Linear(this.weapon.x, targetX, 0.1);
+        this.weapon.y = Phaser.Math.Linear(this.weapon.y, targetY, 0.1);
 
 
         this.weapon.setFlipX(this.facingRight);
 
-        const gunOffsetX = 20;  // Horizontal distance from player
-        const gunOffsetY = -10;   // Vertical distance from player
-
-        const targetXGun = this.player.x + gunOffsetX;
-        const targetYGun = this.player.y + gunOffsetY;
-
-        this.gun.x = Phaser.Math.Linear(this.gun.x, targetXGun, lerpFactor);
-        this.gun.y = Phaser.Math.Linear(this.gun.y, targetYGun, lerpFactor);
-
-        // Calculate angle between gun and cursor for gun rotation
+        const gunOffsetDistance = 40; // Distance from player center
         const angle = Phaser.Math.Angle.Between(
-            this.gun.x,
-            this.gun.y,
+            this.player.x,
+            this.player.y,
             this.input.activePointer.x + this.cameras.main.scrollX,
             this.input.activePointer.y + this.cameras.main.scrollY
         );
+
+        // Calculate gun position around player
+        const targetXGun = this.player.x + Math.cos(angle) * gunOffsetDistance;
+        const targetYGun = this.player.y + Math.sin(angle) * gunOffsetDistance;
+
+        // Smooth movement of gun using linear interpolation
+        const lerpFactor2 = 0.2; // Adjust this value to change how quickly gun follows mouse
+        this.gun.x = Phaser.Math.Linear(this.gun.x, targetXGun, lerpFactor2);
+        this.gun.y = Phaser.Math.Linear(this.gun.y, targetYGun, lerpFactor2);
+
+        // Update gun rotation
+        // Convert angle to degrees for sprite flipping logic
+        // const angleDeg = Phaser.Math.RadToDeg(angle);
+
+        // Flip the gun sprite based on angle
+        // if (angleDeg > 90 || angleDeg < -90) {
+        //     this.gun.setFlipY(true);
+        //     this.gun.setRotation(angle + Math.PI);
+        // } else {
+        //     this.gun.setFlipY(false);
+        //     this.gun.setRotation(angle);
+        // }
+
+        // const gunOffsetX = 20;  // Horizontal distance from player
+        // const gunOffsetY = -10;   // Vertical distance from player
+
+        // const targetXGun = this.player.x + gunOffsetX;
+        // const targetYGun = this.player.y + gunOffsetY;
+
+        // this.gun.x = Phaser.Math.Linear(this.gun.x, targetXGun, lerpFactor);
+        // this.gun.y = Phaser.Math.Linear(this.gun.y, targetYGun, lerpFactor);
+
+        // // Calculate angle between gun and cursor for gun rotation
+        // const angle = Phaser.Math.Angle.Between(
+        //     this.gun.x,
+        //     this.gun.y,
+        //     this.input.activePointer.x + this.cameras.main.scrollX,
+        //     this.input.activePointer.y + this.cameras.main.scrollY
+        // );
 
         // Convert angle to degrees
         const angleDeg = Phaser.Math.RadToDeg(angle);
