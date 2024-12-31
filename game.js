@@ -14,18 +14,8 @@ class MainScene extends Phaser.Scene {
 
         this.load.image('blood', 'assets/blood_1.png');
 
-        // Load goblin sprite frames
-        this.load.image('goblin1', 'assets/goblin/goblin_1.png');
-        this.load.image('goblin2', 'assets/goblin/goblin_2.png');
-        this.load.image('goblin3', 'assets/goblin/goblin_3.png');
-
-        // Load Goblin run animation
-        this.load.image('goblin_run0', 'assets/goblin/goblin_run0.png');
-        this.load.image('goblin_run1', 'assets/goblin/goblin_run1.png');
-        this.load.image('goblin_run2', 'assets/goblin/goblin_run2.png');
-        this.load.image('goblin_run3', 'assets/goblin/goblin_run3.png');
-        this.load.image('goblin_run4', 'assets/goblin/goblin_run4.png');
-        this.load.image('goblin_run5', 'assets/goblin/goblin_run5.png');
+        // Load goblin assets
+        AssetLoader.loadGoblinAssets(this);
 
         // Load player sprite
         for (let i = 0; i <= 7; i++) {
@@ -39,29 +29,9 @@ class MainScene extends Phaser.Scene {
 
         // Load ammo icon
         this.load.image('ammo', 'assets/ammo.png');
-        // reload sound
 
-
-        // Create a custom cursor texture programmatically
-        const cursorGraphics = this.add.graphics();
-        
-        // Draw outer circle
-        cursorGraphics.lineStyle(2, 0xFFFFFF); // White color, 2px thickness
-        cursorGraphics.strokeCircle(16, 16, 12); // Center at 16,16, radius 12
-        
-        // Draw inner circle
-        cursorGraphics.lineStyle(2, 0xFFFFFF);
-        cursorGraphics.strokeCircle(16, 16, 4);
-        
-        // Draw crosshair lines
-        cursorGraphics.lineStyle(2, 0xFFFFFF);
-        // Horizontal line
-        cursorGraphics.lineBetween(0, 16, 32, 16);
-        // Vertical line
-        cursorGraphics.lineBetween(16, 0, 16, 32);
-        
-        cursorGraphics.generateTexture('cursor', 32, 32);
-        cursorGraphics.destroy();
+        // Generate custom cursor
+        AssetLoader.loadCustomCursor(this);
     }
 
     constructor() {
