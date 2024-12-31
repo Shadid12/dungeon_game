@@ -138,12 +138,6 @@ class MainScene extends Phaser.Scene {
         this.cursor.setDepth(999); // Make sure it's always on top
         this.cursor.setVisible(false);
         
-        // Update cursor position in the game loop
-        this.input.on('pointermove', (pointer) => {
-            this.cursor.x = pointer.x + this.cameras.main.scrollX;
-            this.cursor.y = pointer.y + this.cameras.main.scrollY;
-        });
-        
         // Set the physics world bounds to match our larger world
         this.physics.world.setBounds(0, 0, this.worldWidth, this.worldHeight);
         
@@ -404,36 +398,6 @@ class MainScene extends Phaser.Scene {
         const lerpFactor2 = 0.2; // Adjust this value to change how quickly gun follows mouse
         this.gun.x = Phaser.Math.Linear(this.gun.x, targetXGun, lerpFactor2);
         this.gun.y = Phaser.Math.Linear(this.gun.y, targetYGun, lerpFactor2);
-
-        // Update gun rotation
-        // Convert angle to degrees for sprite flipping logic
-        // const angleDeg = Phaser.Math.RadToDeg(angle);
-
-        // Flip the gun sprite based on angle
-        // if (angleDeg > 90 || angleDeg < -90) {
-        //     this.gun.setFlipY(true);
-        //     this.gun.setRotation(angle + Math.PI);
-        // } else {
-        //     this.gun.setFlipY(false);
-        //     this.gun.setRotation(angle);
-        // }
-
-        // const gunOffsetX = 20;  // Horizontal distance from player
-        // const gunOffsetY = -10;   // Vertical distance from player
-
-        // const targetXGun = this.player.x + gunOffsetX;
-        // const targetYGun = this.player.y + gunOffsetY;
-
-        // this.gun.x = Phaser.Math.Linear(this.gun.x, targetXGun, lerpFactor);
-        // this.gun.y = Phaser.Math.Linear(this.gun.y, targetYGun, lerpFactor);
-
-        // // Calculate angle between gun and cursor for gun rotation
-        // const angle = Phaser.Math.Angle.Between(
-        //     this.gun.x,
-        //     this.gun.y,
-        //     this.input.activePointer.x + this.cameras.main.scrollX,
-        //     this.input.activePointer.y + this.cameras.main.scrollY
-        // );
 
         // Convert angle to degrees
         const angleDeg = Phaser.Math.RadToDeg(angle);
