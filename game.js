@@ -1,6 +1,6 @@
 import Player from './player.js';
 import MenuScene from './menu.js';
-import { createBloodEffect, createEnemy, spawnEnemies  } from './utils.js';
+import { createBloodEffect, createEnemy, spawnEnemies, performSlashAttack  } from './utils.js';
 import AssetLoader from './assetLoader.js';
 
 class MainScene extends Phaser.Scene {
@@ -170,7 +170,7 @@ class MainScene extends Phaser.Scene {
                     this.doMeleeAttack();
                 }
             } else if (pointer.rightButtonDown() && this.currentWeapon === 'sword' && !this.slashCooldown) {
-                this.doSlashAttack();
+                performSlashAttack(this, this.weapon, this.player, this.facingRight);
             }
         });
 
@@ -612,86 +612,6 @@ class MainScene extends Phaser.Scene {
         if (this.bulletText) {
             this.bulletText.setText(`${this.bulletCount}`);
         }
-    }
-
-
-    doSlashAttack() {
-        this.weapon.body.enable = true;
-        this.slashCooldown = true;
-        
-        const cooldownText = this.add.text(this.player.x, this.player.y - 50, 'Slash Cooldown', {
-            fontSize: '16px',
-            fill: '#ff0000'
-        }).setOrigin(0.5);
-        
-        // Store original position
-        const originalX = this.weapon.x;
-        const originalY = this.weapon.y;
-        
-        // Calculate positions for the wide slash
-        const topOffset = 50;
-        const sideOffset = this.facingRight ? 75 : -75;  // Flip the side offset based on direction
-        const bottomOffset = 50;
-    
-        // Adjust angles based on facing direction
-        const angles = this.facingRight ? 
-            { start: 0, middle: 90, end: 180 } : 
-            { start: 0, middle: -90, end: -180 };
-        
-        // First tween: Move to top position and rotate
-        this.tweens.add({
-            targets: this.weapon,
-            y: this.weapon.y - topOffset,
-            angle: angles.start,
-            duration: 100,
-            ease: 'Linear',
-            onComplete: () => {
-                // Second tween: Sweep to side position
-                this.tweens.add({
-                    targets: this.weapon,
-                    x: this.weapon.x + sideOffset,
-                    y: originalY,
-                    angle: angles.middle,
-                    duration: 150,
-                    ease: 'Linear',
-                    onComplete: () => {
-                        // Third tween: Sweep to bottom position
-                        this.tweens.add({
-                            targets: this.weapon,
-                            x: originalX,
-                            y: this.weapon.y + bottomOffset,
-                            angle: angles.end,
-                            duration: 150,
-                            ease: 'Linear',
-                            onComplete: () => {
-                                // Final tween: Return to original position
-                                this.tweens.add({
-                                    targets: this.weapon,
-                                    x: originalX,
-                                    y: originalY,
-                                    angle: 0,
-                                    duration: 100,
-                                    ease: 'Linear',
-                                    onComplete: () => {
-                                        this.weapon.body.enable = false;
-                                    }
-                                });
-                            }
-                        });
-                    }
-                });
-            }
-        });
-        
-        // Remove cooldown text after 1 second
-        this.time.delayedCall(1000, () => {
-            cooldownText.destroy();
-        });
-        
-        // Reset cooldown after 4 seconds
-        this.time.delayedCall(4000, () => {
-            this.slashCooldown = false;
-        });
     }
 
     shootProjectile(pointer) {

@@ -114,3 +114,82 @@ export function spawnEnemies(scene) {
         }
     }
 }
+
+export const performSlashAttack = (scene, weapon, player, facingRight) => {
+    weapon.body.enable = true;
+    scene.slashCooldown = true;
+    
+    const cooldownText = scene.add.text(player.x, player.y - 50, 'Slash Cooldown', {
+        fontSize: '16px',
+        fill: '#ff0000'
+    }).setOrigin(0.5);
+    
+    // Store original position
+    const originalX = weapon.x;
+    const originalY = weapon.y;
+    
+    // Calculate positions for the wide slash
+    const topOffset = 50;
+    const sideOffset = facingRight ? 75 : -75;  // Flip the side offset based on direction
+    const bottomOffset = 50;
+
+    // Adjust angles based on facing direction
+    const angles = facingRight ? 
+        { start: 0, middle: 90, end: 180 } : 
+        { start: 0, middle: -90, end: -180 };
+    
+    // First tween: Move to top position and rotate
+    scene.tweens.add({
+        targets: weapon,
+        y: weapon.y - topOffset,
+        angle: angles.start,
+        duration: 100,
+        ease: 'Linear',
+        onComplete: () => {
+            // Second tween: Sweep to side position
+            scene.tweens.add({
+                targets: weapon,
+                x: weapon.x + sideOffset,
+                y: originalY,
+                angle: angles.middle,
+                duration: 150,
+                ease: 'Linear',
+                onComplete: () => {
+                    // Third tween: Sweep to bottom position
+                    scene.tweens.add({
+                        targets: weapon,
+                        x: originalX,
+                        y: weapon.y + bottomOffset,
+                        angle: angles.end,
+                        duration: 150,
+                        ease: 'Linear',
+                        onComplete: () => {
+                            // Final tween: Return to original position
+                            scene.tweens.add({
+                                targets: weapon,
+                                x: originalX,
+                                y: originalY,
+                                angle: 0,
+                                duration: 100,
+                                ease: 'Linear',
+                                onComplete: () => {
+                                    weapon.body.enable = false;
+                                }
+                            });
+                        }
+                    });
+                }
+            });
+        }
+    });
+    
+    // Remove cooldown text after 1 second
+    scene.time.delayedCall(1000, () => {
+        cooldownText.destroy();
+    });
+    
+    // Reset cooldown after 4 seconds
+    scene.time.delayedCall(4000, () => {
+        scene.slashCooldown = false;
+    });
+};
