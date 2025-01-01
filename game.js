@@ -22,6 +22,11 @@ class MainScene extends Phaser.Scene {
             this.load.image(`pug${i}`, `assets/pug/sprite_${i}.png`);
         }
 
+        // Load player walk animation
+        for (let i = 0; i <= 3; i++) {
+            this.load.image(`pug_walk${i}`, `assets/pug/walk/sprite_${i}.png`);
+        }
+
         // Load heart animation frames correctly
         for (let i = 1; i <= 8; i++) {
             this.load.image(`heart${i}`, `assets/heart/Cuore${i}.png`);
@@ -81,6 +86,18 @@ class MainScene extends Phaser.Scene {
             ],
             frameRate: 8, // Adjust this value to make animation faster or slower
             repeat: -1 // -1 means loop forever
+        });
+
+        this.anims.create({
+            key: 'pug_walk',
+            frames: [
+                { key: 'pug_walk0' },
+                { key: 'pug_walk1' },
+                { key: 'pug_walk2' },
+                { key: 'pug_walk3' }
+            ],
+            frameRate: 8,
+            repeat: -1
         });
 
         // Create run animation for goblin run
@@ -483,6 +500,25 @@ class MainScene extends Phaser.Scene {
         }
         if (this.moveKeys.down.isDown) {
             this.player.body.setVelocityY(this.moveSpeed);
+        }
+
+        if (this.moveKeys.left.isDown || this.moveKeys.right.isDown || 
+            this.moveKeys.up.isDown || this.moveKeys.down.isDown) {
+            // Player is moving, play walk animation
+            if (!this.player.anims.isPlaying || this.player.anims.getName() !== 'pug_walk') {
+                this.player.play('pug_walk');
+            }
+        } else {
+            // Player is idle
+            if (!this.player.anims.isPlaying || this.player.anims.getName() !== 'pug_idle') {
+                this.player.play('pug_idle');
+            }
+        }
+
+        if (this.moveKeys.left.isDown) {
+            this.player.setFlipX(true);
+        } else if (this.moveKeys.right.isDown) {
+            this.player.setFlipX(false);
         }
 
         this.player.body.velocity.normalize().scale(this.moveSpeed);
