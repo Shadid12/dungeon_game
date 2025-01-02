@@ -625,14 +625,11 @@ class MainScene extends Phaser.Scene {
             ease: 'Power2',
             yoyo: false
         });
-
+    
         // Add screen effects
         this.cameras.main.flash(1000, 255, 255, 255, true);
         this.cameras.main.shake(500, 0.01);
-
-        // Play victory sound if you have one
-        // this.sound.play('victory_sound', { volume: 0.5 });
-
+    
         // Optional: Add a restart prompt
         const restartText = this.add.text(400, 400, 'Press SPACE to restart', {
             fontSize: '32px',
@@ -643,7 +640,7 @@ class MainScene extends Phaser.Scene {
         .setOrigin(0.5)
         .setScrollFactor(0)
         .setAlpha(0);
-
+    
         this.tweens.add({
             targets: restartText,
             alpha: 1,
@@ -651,10 +648,21 @@ class MainScene extends Phaser.Scene {
             delay: 1000,
             ease: 'Power2'
         });
-
-        // Add restart functionality
+    
+        // Add return to menu functionality
         this.input.keyboard.once('keydown-SPACE', () => {
-            this.scene.restart();
+            // Stop the background music
+            if (this.backgroundMusic) {
+                this.backgroundMusic.stop();
+            }
+            
+            // Add a fade out effect
+            this.cameras.main.fadeOut(500);
+            
+            // Wait for fade out to complete before switching scenes
+            this.cameras.main.once('camerafadeoutcomplete', () => {
+                this.scene.start('MenuScene');
+            });
         });
     }
 
