@@ -67,6 +67,11 @@ class MainScene extends Phaser.Scene {
         this.weaponSwitchCooldown = false;
 
         this.facingRight = false;
+
+        this.spawnTimer = null;
+        this.enemySpawningEnabled = true;
+        this.gameWon = false;
+        this.remainingTime = 60; // 2 minutes in seconds
     }
 
     create() {
@@ -277,12 +282,45 @@ class MainScene extends Phaser.Scene {
             this
         );
         
-        // Adjust spawn timer for larger map (more frequent spawns)
-        this.time.addEvent({
-            delay: 3000,  // Spawn every 3 seconds
-            callback: () => spawnEnemies(this),
+        this.spawnTimer = this.time.addEvent({
+            delay: 3000,
+            callback: () => {
+                if (this.enemySpawningEnabled) {
+                    spawnEnemies(this, 3);
+                }
+            },
             loop: true
         });
+
+        // Add countdown timer
+        this.time.addEvent({
+            delay: 1000,
+            callback: this.updateTimer,
+            callbackScope: this,
+            loop: true
+        });
+
+        // Add timer display
+        this.timerText = this.add.text(16, 110, '1:00', { 
+            fill: '#fff',
+            fontStyle: 'bold',
+            stroke: '#000000',
+            strokeThickness: 4
+        }).setScrollFactor(0).setDepth(999);
+
+
+        // Create victory text (hidden initially)
+        this.victoryText = this.add.text(400, 300, 'LEVEL CLEARED!', {
+            fontSize: '64px',
+            fill: '#fff',
+            fontStyle: 'bold',
+            stroke: '#000000',
+            strokeThickness: 6
+        })
+        .setOrigin(0.5)
+        .setScrollFactor(0)
+        .setDepth(1000)
+        .setAlpha(0); // Initially hidden
 
         // Add collision between projectiles and enemies
         this.physics.add.overlap(this.projectiles, this.enemies, this.projectileHitEnemy, null, this);
@@ -367,9 +405,7 @@ class MainScene extends Phaser.Scene {
     }
 
     update() {
-        if (this.gameOver) {
-            return;
-        }
+        if (this.gameOver || this.gameWon) return;
 
         if (Phaser.Input.Keyboard.JustDown(this.tabKey)) {
             this.switchWeapon();
@@ -430,8 +466,7 @@ class MainScene extends Phaser.Scene {
             this.gun.setRotation(angle);
         }
 
-        
-        // Update enemy directions based on movement
+
         this.enemies.getChildren().forEach(enemy => {
             enemy.updateDirection();
             enemy.healthText.x = enemy.x;
@@ -442,50 +477,45 @@ class MainScene extends Phaser.Scene {
                 this.player.x, this.player.y
             );
             
-            // Enhanced chase behavior
-            if (distance <= enemy.detectionRadius) {
-                const angle = Phaser.Math.Angle.Between(
-                    enemy.x, enemy.y,
-                    this.player.x, this.player.y
+            // Enhanced swarming behavior
+            const angle = Phaser.Math.Angle.Between(
+                enemy.x, enemy.y,
+                this.player.x, this.player.y
+            );
+            
+            // Calculate base speed - faster when spawning is disabled
+            let baseSpeed = this.enemySpawningEnabled ? enemy.moveSpeed : enemy.moveSpeed * 1.5;
+            
+            // Add "swarming" effect by considering other enemies
+            let swarmAngle = angle;
+            const nearbyEnemies = this.enemies.getChildren().filter(other => 
+                other !== enemy && 
+                Phaser.Math.Distance.Between(enemy.x, enemy.y, other.x, other.y) < 100
+            );
+            
+            if (nearbyEnemies.length > 0) {
+                // Average the angles to nearby enemies to create a swarming effect
+                let avgX = 0;
+                let avgY = 0;
+                nearbyEnemies.forEach(other => {
+                    avgX += other.x - enemy.x;
+                    avgY += other.y - enemy.y;
+                });
+                const avoidanceAngle = Math.atan2(avgY, avgX) + Math.PI;
+                swarmAngle = Phaser.Math.Angle.Wrap(
+                    angle * 0.8 + avoidanceAngle * 0.2
                 );
-                
-                // Calculate speed based on distance
-                let chaseSpeed = enemy.moveSpeed;
-                
-                // Speed up when closer to player
-                if (distance < enemy.detectionRadius * 0.5) {
-                    // Gradually increase speed as they get closer
-                    chaseSpeed = Phaser.Math.Linear(
-                        enemy.moveSpeed,
-                        enemy.maxSpeed,
-                        1 - (distance / (enemy.detectionRadius * 0.5))
-                    );
-                }
-                
-                // Add slight randomness to movement for more organic behavior
-                const randomAngle = angle + Phaser.Math.FloatBetween(-0.2, 0.2);
-                
-                enemy.body.setVelocity(
-                    Math.cos(randomAngle) * chaseSpeed,
-                    Math.sin(randomAngle) * chaseSpeed
-                );
-                
-                // Optional: Add "burst" movement occasionally
-                if (Phaser.Math.Between(1, 100) <= 2) { // 2% chance per update
-                    enemy.body.velocity.scale(1.5); // Brief speed boost
-                }
-            } else {
-                // When not chasing, wander randomly
-                if (!enemy.wanderTimer || enemy.wanderTimer <= 0) {
-                    const randomAngle = Phaser.Math.FloatBetween(0, Math.PI * 2);
-                    enemy.body.setVelocity(
-                        Math.cos(randomAngle) * (enemy.moveSpeed * 0.5),
-                        Math.sin(randomAngle) * (enemy.moveSpeed * 0.5)
-                    );
-                    enemy.wanderTimer = Phaser.Math.Between(60, 120); // Change direction every 1-2 seconds
-                }
-                enemy.wanderTimer--;
             }
+            
+            // Set velocity with swarming behavior
+            enemy.body.setVelocity(
+                Math.cos(swarmAngle) * baseSpeed,
+                Math.sin(swarmAngle) * baseSpeed
+            );
+            
+            // Add slight randomness for more organic movement
+            enemy.body.velocity.x += Phaser.Math.Between(-20, 20);
+            enemy.body.velocity.y += Phaser.Math.Between(-20, 20);
         });
 
         // Handle WASD movement
@@ -546,6 +576,86 @@ class MainScene extends Phaser.Scene {
         this.bulletCount += 20;
         this.updateBulletDisplay();  // Update display when collecting ammo
         this.sound.play('reload', { volume: 0.20 });
+    }
+
+
+    updateTimer() {
+        if (this.gameOver || this.gameWon) return;
+
+        this.remainingTime--;
+        
+        if (this.remainingTime <= 0) {
+            this.enemySpawningEnabled = false;
+            this.spawnTimer.remove();
+            
+            // Format and display final time
+            this.timerText.setText('0:00');
+            
+            // Check for win condition periodically after spawning stops
+            this.time.addEvent({
+                delay: 500,
+                callback: this.checkWinCondition,
+                callbackScope: this,
+                loop: true
+            });
+        } else {
+            // Update timer display
+            const minutes = Math.floor(this.remainingTime / 60);
+            const seconds = this.remainingTime % 60;
+            this.timerText.setText(`${minutes}:${seconds.toString().padStart(2, '0')}`);
+        }
+    }
+
+    checkWinCondition() {
+        if (this.gameWon || this.gameOver) return;
+
+        if (this.enemies.getChildren().length === 0) {
+            this.gameWon = true;
+            this.showVictoryScreen();
+        }
+    }
+
+
+    showVictoryScreen() {
+        // Flash the victory text
+        this.tweens.add({
+            targets: this.victoryText,
+            alpha: 1,
+            duration: 1000,
+            ease: 'Power2',
+            yoyo: false
+        });
+
+        // Add screen effects
+        this.cameras.main.flash(1000, 255, 255, 255, true);
+        this.cameras.main.shake(500, 0.01);
+
+        // Play victory sound if you have one
+        // this.sound.play('victory_sound', { volume: 0.5 });
+
+        // Optional: Add a restart prompt
+        const restartText = this.add.text(400, 400, 'Press SPACE to restart', {
+            fontSize: '32px',
+            fill: '#fff',
+            stroke: '#000000',
+            strokeThickness: 4
+        })
+        .setOrigin(0.5)
+        .setScrollFactor(0)
+        .setAlpha(0);
+
+        this.tweens.add({
+            targets: restartText,
+            alpha: 1,
+            duration: 1000,
+            delay: 1000,
+            ease: 'Power2'
+        });
+
+        // Add restart functionality
+        this.input.keyboard.once('keydown-SPACE', () => {
+            this.scene.restart();
+        });
     }
 
 

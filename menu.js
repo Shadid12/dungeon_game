@@ -10,7 +10,7 @@ export default class MenuScene extends Phaser.Scene {
 
     create() {
         // Add title text
-        const title = this.add.text(400, 100, 'Goblin Slayer', {
+        const title = this.add.text(400, 100, 'Survivor ', {
             fontSize: '64px',
             fill: '#fff',
             fontStyle: 'bold'
@@ -27,7 +27,7 @@ export default class MenuScene extends Phaser.Scene {
             'Tab - Switch Weapons',
             '',
             'OBJECTIVE',
-            'Survive and defeat the goblin hordes!',
+            'Survive and defeat the hordes!',
         ];
 
         const instructionsText = this.add.text(400, 250, instructions, {

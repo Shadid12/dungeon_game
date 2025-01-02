@@ -73,7 +73,7 @@ export function createEnemy(scene, x, y, enemiesGroup) {
 
 // At the bottom of util.js (or anywhere you like in that file):
 
-export function spawnEnemies(scene) {
+export function spawnEnemies(scene, number) {
     if (scene.gameOver) {
         return;
     }
@@ -81,7 +81,7 @@ export function spawnEnemies(scene) {
     const MIN_SPAWN_DISTANCE = 400; // Minimum distance from player (in pixels)
     const MAX_ATTEMPTS = 10; // Maximum attempts to find a valid spawn position
 
-    for (let i = 0; i < 5; i++) {
+    for (let i = 0; i < number; i++) {
         let validPosition = false;
         let attempts = 0;
         let x, y;
