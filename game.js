@@ -41,6 +41,12 @@ class MainScene extends Phaser.Scene {
 
     constructor() {
         super({ key: 'MainScene' });
+
+        this._handleContextMenu = (e) => {
+            e.preventDefault();
+        };
+
+
         this.player = null;
         this.enemies = null;
         this.moveKeys = null;  // Changed from cursors to moveKeys
@@ -76,10 +82,22 @@ class MainScene extends Phaser.Scene {
 
     create() {
 
-        // Add these lines right here, at the start of create()
-        this.game.canvas.addEventListener('contextmenu', (e) => {
-            e.preventDefault();
-        });
+        // --- 1) Re-enable input systems in case they were disabled before ---
+        this.input.enabled = true;
+        this.input.keyboard.enabled = true;
+        this.input.mouse.enabled = true;
+
+        // --- 2) Remove any leftover keyboard listeners from previous scenes ---
+        this.input.keyboard.removeAllListeners();
+
+        // --- 3) (Optional) Restore the default cursor, or set a custom one if you prefer ---
+        // If you want to start with no cursor in MainScene, you can set it to 'none' again later.
+        this.input.setDefaultCursor('default');
+
+        // (Now your input system is back in a “fresh” state.)
+
+        // Use the stored reference when adding:
+        this.game.canvas.addEventListener('contextmenu', this._handleContextMenu);
 
         // Create animation for goblins
         this.anims.create({
@@ -631,7 +649,7 @@ class MainScene extends Phaser.Scene {
         this.cameras.main.shake(500, 0.01);
     
         // Optional: Add a restart prompt
-        const restartText = this.add.text(400, 400, 'Press SPACE to restart', {
+        const restartText = this.add.text(400, 400, 'Press SPACE to return to menu', {
             fontSize: '32px',
             fill: '#fff',
             stroke: '#000000',
@@ -649,7 +667,7 @@ class MainScene extends Phaser.Scene {
             ease: 'Power2'
         });
     
-        // Add return to menu functionality
+        // Add return to menu functionality with proper cleanup
         this.input.keyboard.once('keydown-SPACE', () => {
             // Stop the background music
             if (this.backgroundMusic) {
@@ -661,6 +679,12 @@ class MainScene extends Phaser.Scene {
             
             // Wait for fade out to complete before switching scenes
             this.cameras.main.once('camerafadeoutcomplete', () => {
+                this.gameWon = false;
+                this.gameOver = false;
+                this.remainingTime = 60;
+                // Clean up the current scene
+                this.scene.stop('MainScene');
+                // Start the menu scene fresh
                 this.scene.start('MenuScene');
             });
         });

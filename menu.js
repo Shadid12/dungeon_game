@@ -9,14 +9,28 @@ export default class MenuScene extends Phaser.Scene {
     }
 
     create() {
-        // Add title text
+        // --- 1) Re-enable input systems (in case previous scenes disabled them) ---
+        // This helps ensure the keyboard/mouse are active again
+        this.input.enabled = true;
+        this.input.keyboard.enabled = true;
+        this.input.mouse.enabled = true;
+
+        // --- 2) Remove any stray keyboard listeners from previous scenes ---
+        // This just clears out leftover callbacks (like WASD or other events you had).
+        this.input.keyboard.removeAllListeners();
+        
+        // --- 3) Restore the default mouse cursor ---
+        this.input.setDefaultCursor('default');
+        
+        // Now you have a “clean slate” for input.
+
+        // --- The rest of your Menu logic ---
         const title = this.add.text(400, 100, 'Survivor ', {
             fontSize: '64px',
             fill: '#fff',
             fontStyle: 'bold'
         }).setOrigin(0.5);
 
-        // Add instructions text
         const instructions = [
             '',
             'Use "W" "A" "S" "D" for movement',
@@ -30,7 +44,7 @@ export default class MenuScene extends Phaser.Scene {
             'Survive and defeat the hordes!',
         ];
 
-        const instructionsText = this.add.text(400, 250, instructions, {
+        this.add.text(400, 250, instructions, {
             fontSize: '20px',
             fill: '#fff',
             align: 'center',
@@ -44,10 +58,9 @@ export default class MenuScene extends Phaser.Scene {
             fill: '#000'
         }).setOrigin(0.5);
 
-        // Make button interactive
         startButton.setInteractive();
         
-        // Add hover effect
+        // Hover effect
         startButton.on('pointerover', () => {
             startButton.setFillStyle(0x00dd00);
             this.tweens.add({
@@ -68,9 +81,8 @@ export default class MenuScene extends Phaser.Scene {
             });
         });
 
-        // Add click handler to start the game
+        // Click handler to start the game
         startButton.on('pointerdown', () => {
-            // Add click animation
             this.tweens.add({
                 targets: [startButton, startText],
                 scaleX: 0.95,
@@ -78,9 +90,10 @@ export default class MenuScene extends Phaser.Scene {
                 duration: 100,
                 yoyo: true,
                 onComplete: () => {
-                    // Start fade out transition
                     this.cameras.main.fade(500, 0, 0, 0);
                     this.time.delayedCall(500, () => {
+                        // Stop the current scene before starting the new one
+                        this.scene.stop('MenuScene');
                         this.scene.start('MainScene');
                     });
                 }
