@@ -41,6 +41,11 @@ class MainScene extends Phaser.Scene {
         // Load shotgun asset
         this.load.image('shotgun', 'assets/shotgun/shotgun.png');
         this.load.image('shotgun_pickup', 'assets/shotgun/shotgun.png');
+
+        // Load muzzle flash animation frames
+        for (let i = 1; i <= 6; i++) {
+            this.load.image(`shot_${i}`, `assets/shotgun/shot_${i}.png`);
+        }
     }
 
     constructor() {
@@ -164,6 +169,27 @@ class MainScene extends Phaser.Scene {
             frameRate: 12,
             repeat: -1
         });
+
+        // Create muzzle flash animation
+        this.anims.create({
+            key: 'muzzle_flash',
+            frames: [
+                { key: 'shot_1' },
+                { key: 'shot_2' },
+                { key: 'shot_3' },
+                { key: 'shot_4' },
+                { key: 'shot_5' },
+                { key: 'shot_6' }
+            ],
+            frameRate: 20,
+            repeat: 0  // Play once and stop
+        });
+
+        // Create muzzle flash sprite (initially hidden)
+        this.muzzleFlash = this.add.sprite(0, 0, 'shot_1');
+        this.muzzleFlash.setVisible(false);
+        this.muzzleFlash.setScale(1.85);  // Adjust scale as needed
+        this.muzzleFlash.setDepth(1);    // Make sure it appears above the weapon
         
 
         this.gameOver = false;
@@ -954,6 +980,36 @@ class MainScene extends Phaser.Scene {
                 this.sound.play('empty_gun', { volume: 0.20 });
                 return;
             }
+
+            // Position and play muzzle flash
+            const angle = Phaser.Math.Angle.Between(
+                this.player.x, this.player.y,
+                pointer.x + this.cameras.main.scrollX,
+                pointer.y + this.cameras.main.scrollY
+            );
+
+            // Position the muzzle flash at the end of the shotgun barrel
+            const offsetDistance = 60;  // Adjust based on your shotgun sprite
+            this.muzzleFlash.x = this.shotgun.x + Math.cos(angle) * offsetDistance;
+            this.muzzleFlash.y = this.shotgun.y + Math.sin(angle) * offsetDistance;
+            this.muzzleFlash.setRotation(angle);
+
+            // Flip muzzle flash based on aim direction
+            const angleDeg = Phaser.Math.RadToDeg(angle);
+            if (angleDeg > 90 || angleDeg < -90) {
+                this.muzzleFlash.setFlipY(true);
+            } else {
+                this.muzzleFlash.setFlipY(false);
+            }
+
+            // Make visible and play animation
+            this.muzzleFlash.setVisible(true);
+            this.muzzleFlash.play('muzzle_flash');
+
+            // Hide muzzle flash when animation completes
+            this.muzzleFlash.once('animationcomplete', () => {
+                this.muzzleFlash.setVisible(false);
+            });
 
             // Shoot multiple pellets in a spread pattern
             const spreadAngle = 30; // Total spread angle in degrees
