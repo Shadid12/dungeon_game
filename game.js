@@ -1125,12 +1125,21 @@ class MainScene extends Phaser.Scene {
         if (!enemy.isHit) {
             enemy.isHit = true;
             
-            // Check if this is from a slash attack
-            const damage = this.slashCooldown ? this.slashDamage : 1;
-            
+            // Determine damage and knockback based on weapon type
+            let damage = this.slashCooldown ? this.slashDamage : 1;
+            let knockbackForce = 500; // Default knockback
+    
             if (weapon === 'projectile') {
+                // Apply stronger knockback for shotgun
+                if (this.currentWeapon === 'shotgun') {
+                    knockbackForce = 1000; // Stronger knockback for shotgun
+                    
+                    // Add screen shake effect for shotgun hits
+                    this.cameras.main.shake(50, 0.002);
+                }
                 this.sound.play('bullet_hit', { volume: 0.20 });
             } else {
+                knockbackForce = this.slashCooldown ? 700 : 500;
                 this.sound.play('hitSound', { volume: 0.20 });
             }
             
@@ -1164,33 +1173,45 @@ class MainScene extends Phaser.Scene {
             // Add blood effect at enemy position
             createBloodEffect(enemy.x, enemy.y, this.bloodEffects, this.tweens);
     
-            // Check if what weapon hit the enemy
-            if (weapon !== 'projectile') {
+            // Apply knockback with dynamic force
+            if (weapon === 'projectile' || weapon !== 'projectile') {
                 // Calculate knockback direction from player to enemy
                 const angle = Phaser.Math.Angle.Between(
                     this.player.x, this.player.y,
                     enemy.x, enemy.y
                 );
     
-                // Apply knockback force
-                const knockbackForce = this.slashCooldown ? 700 : 500; // Extra knockback for slash attack
+                // Apply the knockback force
                 enemy.body.setVelocity(
                     Math.cos(angle) * knockbackForce,
                     Math.sin(angle) * knockbackForce
                 );
     
-                // Add jitter effect to the enemy
-                this.tweens.add({
-                    targets: enemy,
-                    x: { from: enemy.x - 2, to: enemy.x + 2 },
-                    y: { from: enemy.y - 2, to: enemy.y + 2 },
-                    duration: 50,
-                    yoyo: true,
-                    repeat: 2,
-                    ease: 'Linear'
-                });
+                // Add stronger stagger effect for shotgun hits
+                if (this.currentWeapon === 'shotgun') {
+                    this.tweens.add({
+                        targets: enemy,
+                        x: { from: enemy.x - 4, to: enemy.x + 4 },
+                        y: { from: enemy.y - 4, to: enemy.y + 4 },
+                        duration: 70,
+                        yoyo: true,
+                        repeat: 3,
+                        ease: 'Linear'
+                    });
+                } else {
+                    this.tweens.add({
+                        targets: enemy,
+                        x: { from: enemy.x - 2, to: enemy.x + 2 },
+                        y: { from: enemy.y - 2, to: enemy.y + 2 },
+                        duration: 50,
+                        yoyo: true,
+                        repeat: 2,
+                        ease: 'Linear'
+                    });
+                }
             }
     
+            // Add hit effect
             this.tweens.add({
                 targets: enemy,
                 tint: 0xff0000,
@@ -1199,32 +1220,36 @@ class MainScene extends Phaser.Scene {
                 onComplete: () => {
                     enemy.isHit = false;
                     if (enemy.hitPoints <= 0) {
-                        // Check for drops
-                        const roll = Phaser.Math.Between(1, 100);
-                        if (roll <= 20) { // 5% chance for health
-                            const health = this.healthDrops.create(enemy.x, enemy.y, 'heart1');
-                            health.setScale(1);
-                            
-                            // Add a floating animation to make it more visible
-                            this.tweens.add({
-                                targets: health,
-                                y: health.y - 10,
-                                duration: 1000,
-                                yoyo: true,
-                                repeat: -1,
-                                ease: 'Sine.easeInOut'
-                            });
-                        } else if (roll <= 35) { // 30% chance for ammo (as before)
-                            const ammo = this.ammoDrops.create(enemy.x, enemy.y, 'ammo');
-                            ammo.setScale(0.8);
-                        }
-                        
-                        enemy.healthText.destroy();
-                        enemy.destroy();
+                        this.handleEnemyDeath(enemy);
                     }
                 }
             });
         }
+    }
+
+    handleEnemyDeath(enemy) {
+        // Check for drops
+        const roll = Phaser.Math.Between(1, 100);
+        if (roll <= 20) { // 20% chance for health
+            const health = this.healthDrops.create(enemy.x, enemy.y, 'heart1');
+            health.setScale(1);
+            
+            // Add a floating animation
+            this.tweens.add({
+                targets: health,
+                y: health.y - 10,
+                duration: 1000,
+                yoyo: true,
+                repeat: -1,
+                ease: 'Sine.easeInOut'
+            });
+        } else if (roll <= 35) { // 15% chance for ammo
+            const ammo = this.ammoDrops.create(enemy.x, enemy.y, 'ammo');
+            ammo.setScale(0.8);
+        }
+        
+        enemy.healthText.destroy();
+        enemy.destroy();
     }
 }
 
