@@ -37,6 +37,10 @@ class MainScene extends Phaser.Scene {
 
         // Generate custom cursor
         AssetLoader.loadCustomCursor(this);
+
+        // Load shotgun asset
+        this.load.image('shotgun', 'assets/shotgun/shotgun.png');
+        this.load.image('shotgun_pickup', 'assets/shotgun/shotgun.png');
     }
 
     constructor() {
@@ -78,6 +82,12 @@ class MainScene extends Phaser.Scene {
         this.enemySpawningEnabled = true;
         this.gameWon = false;
         this.remainingTime = 60; // 2 minutes in seconds
+
+        // Add new properties for shotgun
+        this.shotgunPickups = null;
+        this.hasShotgun = false;
+        this.shotgunAmmo = 0;
+        this.shotgunSpawnTimer = null;
     }
 
     create() {
@@ -204,7 +214,7 @@ class MainScene extends Phaser.Scene {
         // Add mouse input
         this.input.on('pointerdown', (pointer) => {
             if (pointer.leftButtonDown()) {
-                if (this.currentWeapon === 'gun') {
+                if (this.currentWeapon === 'gun' || this.currentWeapon === 'shotgun') {
                     this.shootProjectile(pointer);
                 } else if (this.currentWeapon === 'sword') {
                     this.doMeleeAttack();
@@ -419,6 +429,41 @@ class MainScene extends Phaser.Scene {
 
         // Add Tab key binding
         this.tabKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.TAB);
+
+
+        // Create shotgun pickups group
+        this.shotgunPickups = this.physics.add.group();
+
+        // Start spawning shotgun pickups
+        this.shotgunSpawnTimer = this.time.addEvent({
+            delay: 20000,  // Spawn every 20 seconds
+            callback: this.spawnShotgunPickup,
+            callbackScope: this,
+            loop: true
+        });
+
+
+        // Add collision for shotgun pickup
+        this.physics.add.overlap(
+            this.player,
+            this.shotgunPickups,
+            this.collectShotgun,
+            null,
+            this
+        );
+
+        // Create shotgun sprite (initially hidden)
+        this.shotgun = this.add.sprite(this.player.x, this.player.y, 'shotgun');
+        this.shotgun.setOrigin(0.3, 0.5);
+        this.shotgun.setScale(0.8);
+        this.shotgun.setVisible(false);
+
+        // Modify weapon switch logic to include shotgun
+        this.input.keyboard.on('keydown-TAB', () => {
+            if (!this.weaponSwitchCooldown) {
+                this.cycleWeapons();
+            }
+        });
         
     }
 
@@ -586,6 +631,31 @@ class MainScene extends Phaser.Scene {
         this.cursor.x = this.input.activePointer.x + this.cameras.main.scrollX;
         this.cursor.y = this.input.activePointer.y + this.cameras.main.scrollY;
 
+        // Update shotgun position similar to gun
+        if (this.hasShotgun) {
+            const angle = Phaser.Math.Angle.Between(
+                this.player.x, this.player.y,
+                this.input.activePointer.x + this.cameras.main.scrollX,
+                this.input.activePointer.y + this.cameras.main.scrollY
+            );
+
+            const offsetDistance = 40;
+            const targetXShotgun = this.player.x + Math.cos(angle) * offsetDistance;
+            const targetYShotgun = this.player.y + Math.sin(angle) * offsetDistance;
+
+            const lerpFactor = 0.2;
+            this.shotgun.x = Phaser.Math.Linear(this.shotgun.x, targetXShotgun, lerpFactor);
+            this.shotgun.y = Phaser.Math.Linear(this.shotgun.y, targetYShotgun, lerpFactor);
+
+            const angleDeg = Phaser.Math.RadToDeg(angle);
+            if (angleDeg > 90 || angleDeg < -90) {
+                this.shotgun.setFlipX(true);
+                this.shotgun.setRotation(angle + Math.PI);
+            } else {
+                this.shotgun.setFlipX(false);
+                this.shotgun.setRotation(angle);
+            }
+        }
         
     }
 
@@ -594,6 +664,89 @@ class MainScene extends Phaser.Scene {
         this.bulletCount += 20;
         this.updateBulletDisplay();  // Update display when collecting ammo
         this.sound.play('reload', { volume: 0.20 });
+    }
+
+    spawnShotgunPickup() {
+        // Only spawn if player doesn't have shotgun
+        if (!this.hasShotgun) {
+            // Get a random position within the world bounds
+            const x = Phaser.Math.Between(100, this.worldWidth - 100);
+            const y = Phaser.Math.Between(100, this.worldHeight - 100);
+            
+            const pickup = this.shotgunPickups.create(x, y, 'shotgun_pickup');
+            pickup.setScale(0.6);
+            
+            // Add floating animation
+            this.tweens.add({
+                targets: pickup,
+                y: pickup.y - 10,
+                duration: 1000,
+                yoyo: true,
+                repeat: -1,
+                ease: 'Sine.easeInOut'
+            });
+        }
+    }
+
+    collectShotgun(player, pickup) {
+        pickup.destroy();
+        this.hasShotgun = true;
+        this.shotgunAmmo = 30;
+        this.currentWeapon = 'shotgun';
+        this.updateWeaponVisibility();
+        
+        // Show pickup message
+        const pickupText = this.add.text(player.x, player.y - 50, 'Shotgun Acquired!', {
+            fontSize: '16px',
+            fill: '#fff',
+            backgroundColor: '#000',
+            padding: { x: 5, y: 2 }
+        }).setOrigin(0.5);
+
+        this.tweens.add({
+            targets: pickupText,
+            alpha: 0,
+            y: pickupText.y - 20,
+            duration: 1000,
+            onComplete: () => pickupText.destroy()
+        });
+    }
+
+
+    cycleWeapons() {
+        this.weaponSwitchCooldown = true;
+
+        // Determine next weapon
+        const weapons = ['sword'];
+        if (this.bulletCount > 0) weapons.push('gun');
+        if (this.hasShotgun && this.shotgunAmmo > 0) weapons.push('shotgun');
+
+        const currentIndex = weapons.indexOf(this.currentWeapon);
+        const nextIndex = (currentIndex + 1) % weapons.length;
+        this.currentWeapon = weapons[nextIndex];
+
+        this.updateWeaponVisibility();
+        
+        // Reset cooldown after 500ms
+        this.time.delayedCall(500, () => {
+            this.weaponSwitchCooldown = false;
+        });
+    }
+
+
+    updateWeaponVisibility() {
+        this.weapon.setVisible(this.currentWeapon === 'sword');
+        this.gun.setVisible(this.currentWeapon === 'gun');
+        this.shotgun.setVisible(this.currentWeapon === 'shotgun');
+        this.cursor.setVisible(this.currentWeapon === 'gun' || this.currentWeapon === 'shotgun');
+        this.ammoDisplay.setVisible(this.currentWeapon === 'gun' || this.currentWeapon === 'shotgun');
+        
+        // Update ammo display text
+        if (this.currentWeapon === 'shotgun') {
+            this.bulletText.setText(`${this.shotgunAmmo}`);
+        } else if (this.currentWeapon === 'gun') {
+            this.bulletText.setText(`${this.bulletCount}`);
+        }
     }
 
 
@@ -795,44 +948,93 @@ class MainScene extends Phaser.Scene {
     shootProjectile(pointer) {
         if (this.gameOver) return;
 
-        if (this.bulletCount <= 0) {
-            this.sound.play('empty_gun', { volume: 0.20 });
-            return;
-        }
-    
-        // Get world position of pointer
-        const worldPoint = pointer.position;
-        const angle = Phaser.Math.Angle.Between(
-            this.player.x, this.player.y,
-            worldPoint.x + this.cameras.main.scrollX,
-            worldPoint.y + this.cameras.main.scrollY
-        );
-    
-        // Calculate the position at the end of the gun barrel
-        const offsetDistance = 40; // Adjust based on your gun sprite
-        const projectileX = this.gun.x + Math.cos(angle) * offsetDistance;
-        const projectileY = this.gun.y + Math.sin(angle) * offsetDistance;
 
-        // Create projectile at gun's position
-        const projectile = this.projectiles.create(projectileX, projectileY, 'projectile');
+        if (this.currentWeapon === 'shotgun') {
+            if (this.shotgunAmmo <= 0) {
+                this.sound.play('empty_gun', { volume: 0.20 });
+                return;
+            }
+
+            // Shoot multiple pellets in a spread pattern
+            const spreadAngle = 30; // Total spread angle in degrees
+            const pelletCount = 8; // Number of pellets per shot
+            
+            const baseAngle = Phaser.Math.Angle.Between(
+                this.player.x, this.player.y,
+                pointer.x + this.cameras.main.scrollX,
+                pointer.y + this.cameras.main.scrollY
+            );
+
+            for (let i = 0; i < pelletCount; i++) {
+                const angleOffset = (Math.random() - 0.5) * spreadAngle * (Math.PI / 180);
+                const angle = baseAngle + angleOffset;
+
+                const offsetDistance = 40;
+                const projectileX = this.shotgun.x + Math.cos(angle) * offsetDistance;
+                const projectileY = this.shotgun.y + Math.sin(angle) * offsetDistance;
+
+                const projectile = this.projectiles.create(projectileX, projectileY, 'projectile');
+                projectile.setScale(0.6); // Make pellets smaller than regular bullets
+                
+                const speed = 300 + (Math.random() - 0.5) * 50; // Add some random speed variation
+                projectile.setVelocity(
+                    Math.cos(angle) * speed,
+                    Math.sin(angle) * speed
+                );
+
+                // Destroy pellet after shorter distance than regular bullets
+                this.time.delayedCall(300, () => {
+                    projectile.destroy();
+                });
+            }
+
+            // Add strong screen shake for shotgun
+            this.cameras.main.shake(100, 0.01);
+
+            this.shotgunAmmo--;
+            this.updateWeaponVisibility();
+
+        } else {
+
+            if (this.bulletCount <= 0) {
+                this.sound.play('empty_gun', { volume: 0.20 });
+                return;
+            }
         
-        // Set projectile properties
-        const speed = 300;
-        projectile.setVelocity(
-            Math.cos(angle) * speed,
-            Math.sin(angle) * speed
-        );
+            // Get world position of pointer
+            const worldPoint = pointer.position;
+            const angle = Phaser.Math.Angle.Between(
+                this.player.x, this.player.y,
+                worldPoint.x + this.cameras.main.scrollX,
+                worldPoint.y + this.cameras.main.scrollY
+            );
+        
+            // Calculate the position at the end of the gun barrel
+            const offsetDistance = 40; // Adjust based on your gun sprite
+            const projectileX = this.gun.x + Math.cos(angle) * offsetDistance;
+            const projectileY = this.gun.y + Math.sin(angle) * offsetDistance;
     
-        // Optional: Add rotation to the projectile
-        projectile.setRotation(angle);
+            // Create projectile at gun's position
+            const projectile = this.projectiles.create(projectileX, projectileY, 'projectile');
+            
+            // Set projectile properties
+            const speed = 300;
+            projectile.setVelocity(
+                Math.cos(angle) * speed,
+                Math.sin(angle) * speed
+            );
+        
+            // Optional: Add rotation to the projectile
+            projectile.setRotation(angle);
+        
+            // Destroy projectile after 2 seconds
+            this.time.delayedCall(500, () => {
+                projectile.destroy();
+            });
     
-        // Destroy projectile after 2 seconds
-        this.time.delayedCall(500, () => {
-            projectile.destroy();
-        });
-
-        this.bulletCount--;
-        this.updateBulletDisplay();
+            this.bulletCount--;
+            this.updateBulletDisplay();
+        }
     }
 
     screenShake() {
